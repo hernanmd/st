@@ -1,0 +1,158 @@
+#!/usr/bin/env bash
+#
+# smalltalk - A unified CLI for Smalltalk implementations
+# Usage: smalltalk [--debug] <implementation> <command> [options]
+#
+# Implementations: pharo, cuis, gt, squeak, gnu, lst
+# Commands: install, run, search, list, update, clean, clean-artifacts, help
+#
+set -u
+set -o pipefail
+
+# Handle debug flag early before any other processing
+if [[ $# -gt 0 ]] && ([[ "$1" == "-x" ]] || [[ "$1" == "--debug" ]]); then
+    export DEBUG=1
+    set -x
+    shift
+fi
+
+# Get the directory where this script is located
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+LIBEXEC_DIR="${SCRIPT_DIR}/../libexec"
+
+# Source common utilities
+source "${LIBEXEC_DIR}/smalltalk-common.sh"
+
+# Print usage information
+print_usage() {
+    cat << 'EOF'
+smalltalk - A unified CLI for Smalltalk implementations
+
+Usage: smalltalk [--debug] <implementation> <command> [options]
+
+Global Options:
+  --debug, -x         Enable debug mode (set -x tracing)
+  --version           Show version information
+  --help, -h          Show this help message
+
+Implementations:
+  pharo       Pharo Smalltalk (https://pharo.org)
+  cuis        Cuis Smalltalk (https://cuis.st)
+  gt          Glamorous Toolkit (https://gtoolkit.com)
+  squeak      Squeak Smalltalk (https://squeak.org)
+  gnu         GNU Smalltalk (https://gnu.org/software/smalltalk)
+  lst         Little Smalltalk (https://codeberg.org/suetanvil/lst3r)
+
+Commands:
+  install          Install the Smalltalk implementation or a package
+  run              Run the Smalltalk image/environment
+  search           Search for packages
+  list             List available packages
+  update           Update package cache
+  clean            Clean cache directory
+  clean-artifacts  Clean installed Smalltalk artifacts
+  help             Show help for a specific implementation or command
+
+Examples:
+  smalltalk pharo install                    # Install Pharo to Pharo-13_YYYYMMDD_HHMMSS
+  smalltalk pharo install SomePackage        # Install a Pharo package
+  smalltalk pharo install -d ~/my-pharo      # Install to specific directory
+  smalltalk pharo install SomePkg -d ~/dir   # Install package to directory
+  smalltalk -x pharo install                 # Install with debug output
+  smalltalk pharo run                        # Run Pharo
+  smalltalk pharo run eval '1+2'            # Evaluate Smalltalk code
+  smalltalk gt install                       # Install Glamorous Toolkit to GlamorousToolkit_YYYYMMDD_HHMMSS
+  smalltalk gt run metacello 'BaselineOfPha...'
+  smalltalk squeak install                   # Install Squeak to Squeak-6.0_YYYYMMDD_HHMMSS
+  smalltalk -x gt install                    # Install with debug output
+  smalltalk clean-artifacts                  # Clean all artifacts
+  smalltalk clean-artifacts pharo           # Clean Pharo artifacts only
+
+For more information about a specific implementation:
+  smalltalk pharo help
+  smalltalk gt help
+  smalltalk cuis help
+
+EOF
+}
+
+# Print version information
+print_version() {
+    echo "smalltalk version 1.0.0"
+    echo "A unified CLI for Smalltalk implementations"
+}
+
+# Main entry point
+main() {
+    local impl="${1:-}"
+    local cmd="${2:-}"
+
+    # Normalize command name (replace hyphens with underscores)
+    cmd=${cmd//-/_}
+
+    # Handle global commands
+    case "$impl" in
+        clean_artifacts)
+            local target="${3:-}"
+            if [[ -z "$target" ]]; then
+                clean_all_artifacts
+            elif [[ "$target" == "pharo" || "$target" == "gt" || "$target" == "cuis" || "$target" == "squeak" || "$target" == "gnu" || "$target" == "lst" ]]; then
+                source "${LIBEXEC_DIR}/smalltalk-${target}.sh"
+                "smalltalk_${target}_clean_artifacts"
+            else
+                echo "Error: Unknown implementation '$target'" >&2
+                echo "Run 'smalltalk clean_artifacts' without arguments to clean all artifacts." >&2
+                exit 1
+            fi
+            exit 0
+            ;;
+        help|--help|-h)
+            print_usage
+            exit 0
+            ;;
+        --version|-V|version)
+            print_version
+            exit 0
+            ;;
+        "")
+            print_usage
+            exit 1
+            ;;
+        *)
+            ;;
+    esac
+
+    # Validate implementation
+    case "$impl" in
+        pharo|cuis|gt|squeak|gnu|lst)
+            ;;
+        *)
+            echo "Error: Unknown implementation '$impl'" >&2
+            echo "Run 'smalltalk' without arguments to see available implementations." >&2
+            exit 1
+            ;;
+    esac
+
+    if [[ -z "$cmd" ]]; then
+        echo "Error: No command specified for '$impl'" >&2
+        echo "Run 'smalltalk $impl help' for available commands." >&2
+        exit 1
+    fi
+
+    # Source the implementation-specific script
+    source "${LIBEXEC_DIR}/smalltalk-${impl}.sh"
+
+    # Execute the command
+    case "$cmd" in
+        install|run|search|list|update|clean|clean_artifacts|help|version)
+            "smalltalk_${impl}_${cmd}" "${@:3}"
+            ;;
+        *)
+            echo "Error: Unknown command '$cmd' for implementation '$impl'" >&2
+            echo "Run 'smalltalk $impl help' for available commands." >&2
+            exit 1
+            ;;
+    esac
+}
+
+main "$@"
