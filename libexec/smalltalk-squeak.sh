@@ -121,27 +121,95 @@ get_squeak_url() {
 
 # Check if Squeak is installed
 is_squeak_installed() {
-    local search_dirs=("." "$HOME/Squeak" "$HOME/squeak" "$HOME/.local/share/squeak")
-
+    # First check current directory
+    if [[ -f "./Squeak.image" ]] && [[ -f "./Squeak.changes" ]]; then
+        echo "$(pwd)"
+        return 0
+    fi
+    
+    # Check for Squeak*.image at root
+    shopt -s nullglob
+    for img in Squeak*.image; do
+        if [[ -f "$img" ]]; then
+            local changes="${img%.image}.changes"
+            if [[ -f "$changes" ]]; then
+                shopt -u nullglob
+                echo "$(pwd)"
+                return 0
+            fi
+        fi
+    done
+    
+    # Check for timestamped directories
+    for dir in Squeak-*; do
+        if [[ -d "$dir" ]]; then
+            for img in "$dir"/Squeak*.image; do
+                if [[ -f "$img" ]]; then
+                    shopt -u nullglob
+                    echo "$(pwd)/$dir"
+                    return 0
+                fi
+            done
+            # Check inside .app bundle in subdirectory
+            for app_dir in "$dir"/*.app; do
+                if [[ -d "$app_dir" ]]; then
+                    local resources="$app_dir/Contents/Resources"
+                    if [[ -d "$resources" ]]; then
+                        for img in "$resources"/*.image; do
+                            if [[ -f "$img" ]]; then
+                                shopt -u nullglob
+                                echo "$(pwd)/$dir"
+                                return 0
+                            fi
+                        done
+                    fi
+                fi
+            done
+        fi
+    done
+    shopt -u nullglob
+    
+    # Check inside .app bundle (macOS All-in-One format)
+    shopt -s nullglob
+    for app_dir in *.app; do
+        if [[ -d "$app_dir" ]]; then
+            local resources="$app_dir/Contents/Resources"
+            if [[ -d "$resources" ]]; then
+                for img in "$resources"/*.image; do
+                    if [[ -f "$img" ]]; then
+                        shopt -u nullglob
+                        echo "$(pwd)"
+                        return 0
+                    fi
+                done
+            fi
+        fi
+    done
+    shopt -u nullglob
+    
+    # Check common locations
+    local search_dirs=("$HOME/Squeak" "$HOME/squeak" "$HOME/.local/share/squeak")
     for dir in "${search_dirs[@]}"; do
-        # Check root directory for image files
         if [[ -f "${dir}/Squeak.image" ]] && [[ -f "${dir}/Squeak.changes" ]]; then
             echo "$dir"
             return 0
         fi
         
-        # Check for versioned image names at root
+        # Check for versioned images
+        shopt -s nullglob
         for img in "${dir}"/Squeak*.image; do
             if [[ -f "$img" ]]; then
                 local changes="${img%.image}.changes"
                 if [[ -f "$changes" ]]; then
+                    shopt -u nullglob
                     echo "$dir"
                     return 0
                 fi
             fi
         done
+        shopt -u nullglob
         
-        # Check inside .app bundle (macOS All-in-One format)
+        # Check inside .app bundles
         shopt -s nullglob
         for app_dir in "${dir}"/*.app; do
             if [[ -d "$app_dir" ]]; then
@@ -159,6 +227,78 @@ is_squeak_installed() {
         done
         shopt -u nullglob
     done
+    
+    return 1
+}
+
+# Find Squeak installation relative to current directory
+find_squeak_in_current_dir() {
+    # Check current directory
+    if [[ -f "./Squeak.image" ]] && [[ -f "./Squeak.changes" ]]; then
+        echo "$(pwd)"
+        return 0
+    fi
+    
+    # Check for timestamped directories
+    shopt -s nullglob
+    local latest_dir=""
+    local latest_time=0
+    
+    for dir in Squeak-*; do
+        if [[ -d "$dir" ]]; then
+            # Check for .app inside
+            local found_image=false
+            for app in "$dir"/*.app; do
+                if [[ -d "$app" ]] && [[ -d "$app/Contents/Resources" ]]; then
+                    for img in "$app/Contents/Resources"/*.image; do
+                        if [[ -f "$img" ]]; then
+                            found_image=true
+                            break 2
+                        fi
+                    done
+                fi
+            done
+            
+            # Also check for image at root of dir
+            if ! $found_image; then
+                for img in "$dir"/Squeak*.image; do
+                    if [[ -f "$img" ]]; then
+                        found_image=true
+                        break
+                    fi
+                done
+            fi
+            
+            if $found_image; then
+                local mtime
+                mtime=$(stat -f %m "$dir" 2>/dev/null || stat -c %Y "$dir" 2>/dev/null || echo 0)
+                if [[ "$mtime" -gt "$latest_time" ]]; then
+                    latest_time="$mtime"
+                    latest_dir="$dir"
+                fi
+            fi
+        fi
+    done
+    
+    # Also check .app bundles at root
+    for app in *.app; do
+        if [[ -d "$app" ]] && [[ -d "$app/Contents/Resources" ]]; then
+            for img in "$app/Contents/Resources"/*.image; do
+                if [[ -f "$img" ]]; then
+                    shopt -u nullglob
+                    echo "$(pwd)"
+                    return 0
+                fi
+            done
+        fi
+    done
+    shopt -u nullglob
+    
+    if [[ -n "$latest_dir" ]]; then
+        echo "$(pwd)/$latest_dir"
+        return 0
+    fi
+    
     return 1
 }
 
@@ -330,42 +470,110 @@ download_squeak() {
 # Run Squeak
 run_squeak() {
     local squeak_dir
-    squeak_dir=$(is_squeak_installed) || die "Squeak is not installed. Run 'smalltalk squeak install' first."
-
-    cd "$squeak_dir" || die "Cannot change to Squeak directory"
-
+    local original_dir="$(pwd)"
+    
+    # First try current directory, then search common locations
+    squeak_dir=$(find_squeak_in_current_dir 2>/dev/null) || squeak_dir=$(is_squeak_installed 2>/dev/null) || true
+    
+    # If not found, create installation
+    if [[ -z "$squeak_dir" ]]; then
+        log_info "No Squeak installation found. Creating new installation..."
+        
+        # Create timestamped directory
+        local timestamp
+        timestamp=$(date +%Y%m%d_%H%M%S)
+        local install_dir="Squeak-${SQUEAK_VERSION}_${timestamp}"
+        
+        mkdir -p "$install_dir"
+        cd "$install_dir" || die "Cannot create directory: $install_dir"
+        
+        download_squeak "$SQUEAK_VERSION" "."
+        
+        if [[ ! -d "*.app" ]] && [[ ! -f "Squeak*.image" ]]; then
+            die "Squeak installation failed - no .app or image found"
+        fi
+        
+        squeak_dir="$(pwd)"
+        log_success "Squeak installed to: $squeak_dir"
+    else
+        cd "$squeak_dir" || die "Cannot change to Squeak directory: $squeak_dir"
+    fi
+    
+    # Determine how to launch based on OS
     local os_type
     os_type=$(get_os)
-
+    
     case "$os_type" in
         macos)
             # Find .app bundle (works for All-in-One)
             local app_path
             app_path=$(find . -name "*.app" -type d 2>/dev/null | head -1)
             if [[ -n "$app_path" ]]; then
+                log_info "Launching Squeak from: $squeak_dir"
                 open "$app_path"
             elif [[ -f "./Squeak.app" ]]; then
                 open ./Squeak.app
             else
                 # Look for any .app
+                shopt -s nullglob
                 local apps=(*.app)
-                if [[ ${#apps[@]} -gt 0 ]] && [[ -f "${apps[0]}" ]]; then
+                shopt -u nullglob
+                if [[ ${#apps[@]} -gt 0 ]] && [[ -d "${apps[0]}" ]]; then
                     open "${apps[0]}"
                 else
-                    die "Squeak.app not found"
+                    die "Squeak.app not found in $squeak_dir"
                 fi
             fi
             ;;
         linux)
-            # Look for the Squeak VM executable
-            local vm_path
-            vm_path=$(find . -name "squeak" -o -name "squeakvm" 2>/dev/null | head -1 || true)
+            # Look for the Squeak VM executable inside .app bundle or at root
+            local vm_path=""
+            local image_name=""
             
-            local image_name
-            image_name=$(ls Squeak*.image 2>/dev/null | head -1)
+            # Check inside .app bundle for Linux executable
+            shopt -s nullglob
+            for app in *.app; do
+                if [[ -d "$app" ]]; then
+                    # Check for Linux executable in bin/ or similar
+                    if [[ -f "$app/bin/squeak" ]]; then
+                        vm_path="$app/bin/squeak"
+                    elif [[ -f "$app/squeak" ]]; then
+                        vm_path="$app/squeak"
+                    fi
+                    
+                    # Also look for image in Contents/Resources
+                    local resources="$app/Contents/Resources"
+                    if [[ -d "$resources" ]]; then
+                        for img in "$resources"/*.image; do
+                            if [[ -f "$img" ]]; then
+                                image_name="$img"
+                                break
+                            fi
+                        done
+                    fi
+                    
+                    if [[ -n "$vm_path" ]]; then
+                        break
+                    fi
+                fi
+            done
+            shopt -u nullglob
+            
+            # Fallback: Check for image at root
+            if [[ -z "$image_name" ]]; then
+                shopt -s nullglob
+                image_name=$(ls Squeak*.image 2>/dev/null | head -1)
+                shopt -u nullglob
+            fi
+            
+            # Fallback: Check for squeak/squeakvm at root
+            if [[ -z "$vm_path" ]]; then
+                vm_path=$(find . -maxdepth 2 -name "squeak" -o -name "squeakvm" 2>/dev/null | head -1)
+            fi
             
             if [[ -n "$vm_path" ]] && [[ -n "$image_name" ]]; then
                 chmod +x "$vm_path" 2>/dev/null || true
+                log_info "Launching Squeak from: $squeak_dir"
                 "$vm_path" "$image_name"
             elif [[ -n "$image_name" ]]; then
                 # Try system squeak
@@ -375,19 +583,44 @@ run_squeak() {
                     die "Cannot find Squeak VM. Install system Squeak or check the All-in-One bundle."
                 fi
             else
-                die "Cannot find Squeak image"
+                die "Cannot find Squeak image or VM in $squeak_dir"
             fi
             ;;
         windows)
-            # Look for .exe file
-            local exe_path
-            exe_path=$(find . -name "*.exe" -type f 2>/dev/null | head -1)
-            if [[ -n "$exe_path" ]]; then
+            # Look for .exe file inside .app or at root
+            local exe_path=""
+            
+            # Check inside .app bundle for Windows executable
+            shopt -s nullglob
+            for app in *.app; do
+                if [[ -d "$app" ]]; then
+                    if [[ -f "$app/Contents/Resources/Squeak.exe" ]]; then
+                        exe_path="$app/Contents/Resources/Squeak.exe"
+                    elif [[ -f "$app/Squeak.exe" ]]; then
+                        exe_path="$app/Squeak.exe"
+                    fi
+                    if [[ -n "$exe_path" ]]; then
+                        break
+                    fi
+                fi
+            done
+            shopt -u nullglob
+            
+            # Fallback: Check for .exe at root or in subdirectories
+            if [[ -z "$exe_path" ]]; then
+                exe_path=$(find . -name "Squeak.exe" -o -name "*.exe" 2>/dev/null | head -1)
+            fi
+            
+            if [[ -n "$exe_path" ]] && [[ -f "$exe_path" ]]; then
                 chmod +x "$exe_path" 2>/dev/null || true
+                log_info "Launching Squeak from: $squeak_dir"
                 "$exe_path"
             else
-                die "Squeak.exe not found"
+                die "Squeak.exe not found in $squeak_dir"
             fi
+            ;;
+        *)
+            die "Unsupported OS: $os_type"
             ;;
     esac
 }

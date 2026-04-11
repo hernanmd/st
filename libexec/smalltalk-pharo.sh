@@ -88,14 +88,70 @@ set_pharo_url() {
 
 # Check if Pharo is installed
 is_pharo_installed() {
-    local search_dirs=("." "$HOME/pharo" "$HOME/.local/share/pharo")
-
+    # First check current directory
+    if [[ -f "./Pharo.image" ]] && [[ -f "./Pharo.changes" ]]; then
+        echo "$(pwd)"
+        return 0
+    fi
+    
+    # Check for timestamped directories in current directory (e.g., Pharo-13_20240410_220002)
+    for dir in Pharo-*; do
+        if [[ -d "$dir" ]] && [[ -f "${dir}/Pharo.image" ]] && [[ -f "${dir}/Pharo.changes" ]]; then
+            echo "$(pwd)/$dir"
+            return 0
+        fi
+    done
+    
+    # Check for Pharo in common locations
+    local search_dirs=("$HOME/pharo" "$HOME/.local/share/pharo" "$HOME/Pharo")
     for dir in "${search_dirs[@]}"; do
         if [[ -f "${dir}/Pharo.image" ]] && [[ -f "${dir}/Pharo.changes" ]]; then
             echo "$dir"
             return 0
         fi
+        # Also check subdirectories
+        for subdir in "$dir"/Pharo-*; do
+            if [[ -d "$subdir" ]] && [[ -f "${subdir}/Pharo.image" ]] && [[ -f "${subdir}/Pharo.changes" ]]; then
+                echo "$subdir"
+                return 0
+            fi
+        done
     done
+    
+    return 1
+}
+
+# Find Pharo installation relative to current directory
+find_pharo_in_current_dir() {
+    # Check current directory
+    if [[ -f "./Pharo.image" ]] && [[ -f "./Pharo.changes" ]]; then
+        echo "$(pwd)"
+        return 0
+    fi
+    
+    # Check for timestamped directories (Pharo-13_YYYYMMDD_HHMMSS)
+    local latest_dir=""
+    local latest_time=0
+    
+    shopt -s nullglob
+    for dir in Pharo-*; do
+        if [[ -d "$dir" ]] && [[ -f "${dir}/Pharo.image" ]]; then
+            # Get modification time to find most recent
+            local mtime
+            mtime=$(stat -f %m "$dir" 2>/dev/null || stat -c %Y "$dir" 2>/dev/null || echo 0)
+            if [[ "$mtime" -gt "$latest_time" ]]; then
+                latest_time="$mtime"
+                latest_dir="$dir"
+            fi
+        fi
+    done
+    shopt -u nullglob
+    
+    if [[ -n "$latest_dir" ]]; then
+        echo "$(pwd)/$latest_dir"
+        return 0
+    fi
+    
     return 1
 }
 
@@ -189,18 +245,85 @@ download_pharo_alternative() {
 # Run Pharo
 run_pharo() {
     local pharo_dir
-    pharo_dir=$(is_pharo_installed) || die "Pharo is not installed. Run 'st pharo install' first."
-
-    cd "$pharo_dir" || die "Cannot change to Pharo directory"
-
-    if [[ -f "./pharo-ui" ]]; then
-        chmod +x ./pharo-ui
-        ./pharo-ui &
-    elif [[ -f "./Pharo.app/Contents/MacOS/Pharo" ]]; then
-        open ./Pharo.app
+    local original_dir="$(pwd)"
+    
+    # First try to find existing Pharo installation
+    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
+    
+    # If not found, offer to install
+    if [[ -z "$pharo_dir" ]]; then
+        log_warn "No Pharo installation found in current directory or common locations"
+        log_info "Creating a new Pharo installation..."
+        
+        # Create timestamped directory
+        local timestamp
+        timestamp=$(date +%Y%m%d_%H%M%S)
+        local install_dir="Pharo-${PHARO_VERSION}_${timestamp}"
+        
+        mkdir -p "$install_dir"
+        cd "$install_dir" || die "Cannot change to directory: $install_dir"
+        
+        download_pharo "$PHARO_VERSION" "."
+        
+        # Verify installation
+        if [[ ! -f "./Pharo.image" ]]; then
+            die "Pharo installation failed - no image file found"
+        fi
+        
+        pharo_dir="$(pwd)"
+        log_success "Pharo installed to: $pharo_dir"
     else
-        die "Cannot find Pharo executable"
+        cd "$pharo_dir" || die "Cannot change to Pharo directory: $pharo_dir"
     fi
+    
+    # Determine how to run based on OS and available executables
+    local os_type
+    os_type=$(get_os)
+    
+    case "$os_type" in
+        macos)
+            # Try pharo-ui script first (handles architecture correctly)
+            if [[ -f "./pharo-ui" ]]; then
+                chmod +x ./pharo-ui 2>/dev/null || true
+                log_info "Launching Pharo..."
+                ./pharo-ui &
+            elif [[ -f "./Pharo.app/Contents/MacOS/Pharo" ]]; then
+                open ./Pharo.app
+            elif [[ -f "./pharo" ]]; then
+                # Try command-line launcher
+                chmod +x ./pharo 2>/dev/null || true
+                ./pharo --interactive &
+            else
+                die "Cannot find Pharo executable in $pharo_dir"
+            fi
+            ;;
+        linux)
+            if [[ -f "./pharo-ui" ]]; then
+                chmod +x ./pharo-ui 2>/dev/null || true
+                ./pharo-ui &
+            elif [[ -f "./pharo" ]]; then
+                chmod +x ./pharo 2>/dev/null || true
+                ./pharo --interactive &
+            else
+                die "Cannot find Pharo executable in $pharo_dir"
+            fi
+            ;;
+        windows)
+            if [[ -f "./Pharo.exe" ]]; then
+                ./Pharo.exe &
+            elif [[ -f "./pharo-ui" ]]; then
+                chmod +x ./pharo-ui 2>/dev/null || true
+                ./pharo-ui &
+            else
+                die "Cannot find Pharo executable in $pharo_dir"
+            fi
+            ;;
+        *)
+            die "Unsupported OS: $os_type"
+            ;;
+    esac
+    
+    log_info "Pharo launched from: $pharo_dir"
 }
 
 # Search for packages on GitHub
@@ -448,21 +571,46 @@ smalltalk_pharo_install() {
 smalltalk_pharo_run() {
     local cmd="${1:-}"
     local pharo_dir
-    pharo_dir=$(is_pharo_installed) || {
-        log_info "Pharo not found, installing..."
-        download_pharo
-        pharo_dir="."
-    }
-
-    cd "$pharo_dir" || die "Cannot change to Pharo directory"
+    local original_dir="$(pwd)"
+    
+    # First try current directory, then search common locations
+    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
+    
+    # If not found, create installation and try again
+    if [[ -z "$pharo_dir" ]]; then
+        log_info "No Pharo installation found. Creating new installation..."
+        
+        # Create timestamped directory
+        local timestamp
+        timestamp=$(date +%Y%m%d_%H%M%S)
+        local install_dir="Pharo-${PHARO_VERSION}_${timestamp}"
+        
+        mkdir -p "$install_dir"
+        cd "$install_dir" || die "Cannot create directory: $install_dir"
+        
+        download_pharo "$PHARO_VERSION" "."
+        
+        if [[ ! -f "./Pharo.image" ]]; then
+            die "Pharo installation failed - no image file found"
+        fi
+        
+        pharo_dir="$(pwd)"
+        log_success "Pharo installed to: $pharo_dir"
+    else
+        cd "$pharo_dir" || die "Cannot change to Pharo directory: $pharo_dir"
+    fi
 
     # If no command, just run the UI
     if [[ -z "$cmd" ]]; then
         if [[ -f "./pharo-ui" ]]; then
-            chmod +x ./pharo-ui
+            chmod +x ./pharo-ui 2>/dev/null || true
+            log_info "Launching Pharo from: $pharo_dir"
             ./pharo-ui &
         elif [[ -f "./Pharo.app/Contents/MacOS/Pharo" ]]; then
             open ./Pharo.app
+        elif [[ -f "./pharo" ]]; then
+            chmod +x ./pharo 2>/dev/null || true
+            ./pharo --interactive &
         else
             die "Cannot find Pharo executable"
         fi

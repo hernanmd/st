@@ -74,14 +74,75 @@ list_cuis_versions() {
 
 # Check if Cuis is installed
 is_cuis_installed() {
-    local search_dirs=("." "$HOME/Cuis" "$HOME/cuis" "$HOME/.local/share/cuis")
-
+    # First check current directory
+    if [[ -f "./Cuis.image" ]] && [[ -f "./Cuis.changes" ]]; then
+        echo "$(pwd)"
+        return 0
+    fi
+    
+    # Check for timestamped directories in current directory (e.g., Cuis-7.6_20240410_220002)
+    shopt -s nullglob
+    for dir in Cuis-*; do
+        if [[ -d "$dir" ]] && [[ -f "${dir}/Cuis.image" ]] && [[ -f "${dir}/Cuis.changes" ]]; then
+            shopt -u nullglob
+            echo "$(pwd)/$dir"
+            return 0
+        fi
+    done
+    shopt -u nullglob
+    
+    # Check for Cuis in common locations
+    local search_dirs=("$HOME/Cuis" "$HOME/cuis" "$HOME/.local/share/cuis")
     for dir in "${search_dirs[@]}"; do
         if [[ -f "${dir}/Cuis.image" ]] && [[ -f "${dir}/Cuis.changes" ]]; then
             echo "$dir"
             return 0
         fi
+        # Also check subdirectories
+        shopt -s nullglob
+        for subdir in "$dir"/Cuis-*; do
+            if [[ -d "$subdir" ]] && [[ -f "${subdir}/Cuis.image" ]] && [[ -f "${subdir}/Cuis.changes" ]]; then
+                shopt -u nullglob
+                echo "$subdir"
+                return 0
+            fi
+        done
+        shopt -u nullglob
     done
+    
+    return 1
+}
+
+# Find Cuis installation relative to current directory
+find_cuis_in_current_dir() {
+    # Check current directory
+    if [[ -f "./Cuis.image" ]] && [[ -f "./Cuis.changes" ]]; then
+        echo "$(pwd)"
+        return 0
+    fi
+    
+    # Check for timestamped directories
+    shopt -s nullglob
+    local latest_dir=""
+    local latest_time=0
+    
+    for dir in Cuis-*; do
+        if [[ -d "$dir" ]] && [[ -f "${dir}/Cuis.image" ]]; then
+            local mtime
+            mtime=$(stat -f %m "$dir" 2>/dev/null || stat -c %Y "$dir" 2>/dev/null || echo 0)
+            if [[ "$mtime" -gt "$latest_time" ]]; then
+                latest_time="$mtime"
+                latest_dir="$dir"
+            fi
+        fi
+    done
+    shopt -u nullglob
+    
+    if [[ -n "$latest_dir" ]]; then
+        echo "$(pwd)/$latest_dir"
+        return 0
+    fi
+    
     return 1
 }
 
@@ -148,21 +209,67 @@ download_cuis() {
 # Run Cuis
 run_cuis() {
     local cuis_dir
-    cuis_dir=$(is_cuis_installed) || die "Cuis is not installed. Run 'st cuis install' first."
-
-    cd "$cuis_dir" || die "Cannot change to Cuis directory"
-
-    if [[ -f "./Cuis.app" ]]; then
-        open ./Cuis.app
-    elif [[ -f "./run_cuis.sh" ]]; then
-        chmod +x ./run_cuis.sh
-        ./run_cuis.sh
-    elif [[ -f "./cuis" ]]; then
-        chmod +x ./cuis
-        ./cuis
+    local original_dir="$(pwd)"
+    
+    # First try current directory, then search common locations
+    cuis_dir=$(find_cuis_in_current_dir 2>/dev/null) || cuis_dir=$(is_cuis_installed 2>/dev/null) || true
+    
+    # If not found, create installation
+    if [[ -z "$cuis_dir" ]]; then
+        log_info "No Cuis installation found. Creating new installation..."
+        
+        # Create timestamped directory
+        local timestamp
+        timestamp=$(date +%Y%m%d_%H%M%S)
+        local install_dir="Cuis-${CUIS_VERSION}_${timestamp}"
+        
+        mkdir -p "$install_dir"
+        cd "$install_dir" || die "Cannot create directory: $install_dir"
+        
+        download_cuis "$CUIS_VERSION" "."
+        
+        if [[ ! -f "./Cuis.image" ]]; then
+            die "Cuis installation failed - no image file found"
+        fi
+        
+        cuis_dir="$(pwd)"
+        log_success "Cuis installed to: $cuis_dir"
     else
-        die "Cannot find Cuis executable"
+        cd "$cuis_dir" || die "Cannot change to Cuis directory: $cuis_dir"
     fi
+    
+    # Launch based on OS
+    local os_type
+    os_type=$(get_os)
+    
+    case "$os_type" in
+        macos)
+            if [[ -f "./Cuis.app" ]]; then
+                open ./Cuis.app
+            elif [[ -f "./run_cuis.sh" ]]; then
+                chmod +x ./run_cuis.sh 2>/dev/null || true
+                ./run_cuis.sh
+            else
+                die "Cannot find Cuis executable"
+            fi
+            ;;
+        linux)
+            if [[ -f "./run_cuis.sh" ]]; then
+                chmod +x ./run_cuis.sh 2>/dev/null || true
+                ./run_cuis.sh
+            elif [[ -f "./cuis" ]]; then
+                chmod +x ./cuis 2>/dev/null || true
+                ./cuis
+            else
+                die "Cannot find Cuis executable"
+            fi
+            ;;
+        *)
+            die "Unsupported OS: $os_type"
+            ;;
+    esac
+    
+    log_info "Cuis launched from: $cuis_dir"
 }
 
 #################################
