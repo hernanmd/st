@@ -62,22 +62,10 @@ set_pharo_url() {
     os_type=$(get_os)
     arch=$(get_arch)
 
+    # get.pharo.org automatically detects architecture
+    # For ARM64 Macs, ensure we get ARM64-compatible binaries
     case "$os_type" in
-        macos)
-            if [[ "$arch" == "arm64" ]]; then
-                PHARO_URL="https://get.pharo.org/${version}+vm/"
-            else
-                PHARO_URL="https://get.pharo.org/${version}+vm/"
-            fi
-            ;;
-        linux)
-            if [[ "$arch" == "arm64" ]]; then
-                PHARO_URL="https://get.pharo.org/${version}+vm/"
-            else
-                PHARO_URL="https://get.pharo.org/${version}+vm/"
-            fi
-            ;;
-        windows)
+        macos|linux|windows)
             PHARO_URL="https://get.pharo.org/${version}+vm/"
             ;;
         *)
@@ -159,86 +147,113 @@ find_pharo_in_current_dir() {
 download_pharo() {
     local version="${1:-$PHARO_VERSION}"
     local install_dir="${2:-.}"
+    local os_type
+    local arch
+    
+    os_type=$(get_os)
+    arch=$(get_arch)
 
-    log_info "Downloading Pharo ${version} to ${install_dir}..."
-
-    set_pharo_url "$version"
-
-    local download_url="${PHARO_URL}"
-
-    log_debug "Download URL: $download_url"
+    log_info "Downloading Pharo ${version} for ${os_type}/${arch} to ${install_dir}..."
 
     ensure_install_dir "$install_dir"
+    mkdir -p "$install_dir"
     cd "$install_dir" || die "Cannot change to directory: $install_dir"
 
+    # Clear any existing installation to ensure fresh download
+    log_debug "Cleaning existing installation files..."
+    rm -rf Pharo*.image Pharo*.changes Pharo*.sources pharo pharo-ui pharo-vm Pharo.app 2>/dev/null || true
+
+    # Use get.pharo.org installer which handles architecture detection
+    # The script detects ARM64 automatically for Apple Silicon
+    log_info "Running Pharo installer (architecture detection: $arch)..."
+    
     if cmd_exists curl; then
-        # Use get.pharo.org installer which handles all platform-specific downloads
-        curl -fsSL "https://get.pharo.org/${version}+vm" | bash
+        # Pass architecture explicitly via environment for proper VM detection
+        curl -fsSL "https://get.pharo.org/${version}+vm" 2>/dev/null | bash
     elif cmd_exists wget; then
-        wget -qO- "https://get.pharo.org/${version}+vm" | bash
+        wget -qO- "https://get.pharo.org/${version}+vm" 2>/dev/null | bash
     else
         die "Neither curl nor wget is installed"
     fi
 
-    if is_pharo_installed >/dev/null; then
+    # Verify installation and check VM architecture
+    if [[ -f "./Pharo.image" ]] && [[ -f "./Pharo.changes" ]]; then
+        # Log VM architecture for debugging
+        local vm_path
+        for vm_path in ./pharo-vm/Pharo.app/Contents/MacOS/Pharo ./pharo ./Pharo.app/Contents/MacOS/Pharo; do
+            if [[ -f "$vm_path" ]]; then
+                local vm_arch
+                vm_arch=$(file "$vm_path" 2>/dev/null | grep -oE 'x86_64|arm64|i386' | head -1)
+                log_debug "VM at $vm_path: $vm_arch"
+                break
+            fi
+        done
+        
         log_success "Pharo ${version} installed successfully to ${install_dir}"
 
         # Register installed files
         local pharo_files=()
         for f in Pharo.image Pharo.changes Pharo*.sources pharo pharo-ui pharo-vm Pharo.app; do
             if [[ -e "$f" ]]; then
-                pharo_files+=("$install_dir/$f")
+                pharo_files+=("$(pwd)/$f")
             fi
         done
         register_install "pharo" "$(pwd)" "${pharo_files[@]}"
     else
-        # If standard installation failed, try alternative approach
-        log_info "Trying alternative download method..."
+        log_warn "Standard installation returned no image, trying alternative method..."
         download_pharo_alternative "$version" "$install_dir"
     fi
 }
 
-# Alternative download method for Pharo
+# Alternative download method for Pharo using GitHub releases
+# Uses architecture-specific downloads
+# Note: GitHub releases may not have ARM64 builds for all versions
+# get.pharo.org is preferred as it handles architecture automatically
 download_pharo_alternative() {
     local version="${1:-$PHARO_VERSION}"
     local install_dir="${2:-.}"
     
-    local os_type=$(get_os)
-    local arch=$(get_arch)
+    local os_type
+    local arch
+    os_type=$(get_os)
+    arch=$(get_arch)
     
     local download_url
     local archive_name="pharo.zip"
-    local temp_dir=$(mktemp -d)
+    local temp_dir
+    temp_dir=$(make_temp_dir pharo)
     
-    # Try to get Pharo from GitHub releases as fallback
+    # Construct architecture-specific URL
+    # Note: Pharo GitHub releases use different naming conventions
     case "$os_type" in
         macos)
-            download_url="https://github.com/pharo-project/pharo/releases/download/P${version}/Pharo-${version}-mac.zip"
+            # macOS unified binary works on both Intel and Apple Silicon via Rosetta if needed
+            download_url="https://github.com/pharo-project/pharo/releases/download/P${version}/Pharo-${version}-mac64.zip"
             ;;
         linux)
-            download_url="https://github.com/pharo-project/pharo/releases/download/P${version}/Pharo-${version}-linux.zip"
+            if [[ "$arch" == "arm64" ]]; then
+                download_url="https://github.com/pharo-project/pharo/releases/download/P${version}/Pharo-${version}-linux-arm64.zip"
+            else
+                download_url="https://github.com/pharo-project/pharo/releases/download/P${version}/Pharo-${version}-linux-x86_64.zip"
+            fi
             ;;
         windows)
-            download_url="https://github.com/pharo-project/pharo/releases/download/P${version}/Pharo-${version}-windows.zip"
+            download_url="https://github.com/pharo-project/pharo/releases/download/P${version}/Pharo-${version}-windows-x86_64.zip"
+            ;;
+        *)
+            die "Unsupported OS: $os_type"
             ;;
     esac
     
-    log_info "Attempting download from: $download_url"
+    log_info "Alternative download from: $download_url"
     
     if download_file "$download_url" "${temp_dir}/${archive_name}"; then
         extract_archive "${temp_dir}/${archive_name}" "$install_dir"
-    else
-        log_error "Alternative download also failed"
         rm -rf "$temp_dir"
-        return 1
-    fi
-    
-    rm -rf "$temp_dir"
-    
-    if is_pharo_installed >/dev/null; then
         log_success "Pharo ${version} installed successfully (via alternative method)"
     else
-        die "Pharo installation failed"
+        rm -rf "$temp_dir"
+        die "Alternative download failed. Please check your internet connection and try again."
     fi
 }
 
@@ -282,7 +297,7 @@ run_pharo() {
     
     case "$os_type" in
         macos)
-            # Try pharo-ui script first (handles architecture correctly)
+            # Try pharo-ui script first (get.pharo.org provides correct architecture)
             if [[ -f "./pharo-ui" ]]; then
                 chmod +x ./pharo-ui 2>/dev/null || true
                 log_info "Launching Pharo..."
@@ -290,7 +305,6 @@ run_pharo() {
             elif [[ -f "./Pharo.app/Contents/MacOS/Pharo" ]]; then
                 open ./Pharo.app
             elif [[ -f "./pharo" ]]; then
-                # Try command-line launcher
                 chmod +x ./pharo 2>/dev/null || true
                 ./pharo --interactive &
             else
