@@ -3,7 +3,7 @@
 # Timestamped Directory Tests
 # ============================================================================
 
-@test "smalltalk pharo install without -d creates timestamped directory" {
+@test "st pharo install without -d creates timestamped directory" {
     local test_dir="$TEST_TMPDIR/test-pharo-timestamp"
     mkdir -p "$test_dir"
     
@@ -13,7 +13,7 @@
     [[ "$output" == *"Creating directory: Pharo"* ]] || [[ "$output" == *"timestamp"* ]] || [[ "$output" == *"No destination"* ]]
 }
 
-@test "smalltalk gt install without -d creates timestamped directory" {
+@test "st gt install without -d creates timestamped directory" {
     local test_dir="$TEST_TMPDIR/test-gt-timestamp"
     mkdir -p "$test_dir"
     
@@ -23,7 +23,7 @@
     [[ "$output" == *"Creating directory: GlamorousToolkit"* ]] || [[ "$output" == *"timestamp"* ]] || [[ "$output" == *"No destination"* ]]
 }
 
-@test "smalltalk squeak install without -d creates timestamped directory" {
+@test "st squeak install without -d creates timestamped directory" {
     local test_dir="$TEST_TMPDIR/test-squeak-timestamp"
     mkdir -p "$test_dir"
     
@@ -33,7 +33,7 @@
     [[ "$output" == *"Creating directory: Squeak"* ]] || [[ "$output" == *"timestamp"* ]] || [[ "$output" == *"No destination"* ]]
 }
 
-@test "smalltalk cuis install without -d creates timestamped directory" {
+@test "st cuis install without -d creates timestamped directory" {
     local test_dir="$TEST_TMPDIR/test-cuis-timestamp"
     mkdir -p "$test_dir"
     
@@ -71,7 +71,7 @@
 # LST No Arguments Test
 # ============================================================================
 
-@test "smalltalk lst install without arguments does not error" {
+@test "st lst install without arguments does not error" {
     local test_dir="$TEST_TMPDIR/test-lst-noargs"
     mkdir -p "$test_dir"
     
@@ -82,7 +82,7 @@
     [[ "$output" != *'$1: unbound'* ]]
 }
 
-@test "smalltalk gnu install without arguments does not error" {
+@test "st gnu install without arguments does not error" {
     local test_dir="$TEST_TMPDIR/test-gnu-noargs"
     mkdir -p "$test_dir"
     
@@ -100,7 +100,7 @@
 
 # Get project root
 PROJECT_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
-SMALLTALK_CMD="$PROJECT_ROOT/bin/smalltalk"
+SMALLTALK_CMD="$PROJECT_ROOT/bin/st"
 
 # Test isolation: use temp directories and don't pollute source tree
 TEST_TMPDIR="${BATS_TMPDIR:-/tmp}/smalltalk-tests-$$"
@@ -143,26 +143,26 @@ teardown() {
 # Basic CLI Tests
 # ============================================================================
 
-@test "smalltalk runs without arguments and shows usage" {
+@test "st runs without arguments and shows usage" {
     run "$SMALLTALK_CMD"
     [ "$status" -eq 1 ]
     [[ "$output" == *"Usage:"* ]]
     [[ "$output" == *"Implementations:"* ]]
 }
 
-@test "smalltalk --help shows usage" {
+@test "st --help shows usage" {
     run "$SMALLTALK_CMD" --help
     [ "$status" -eq 0 ]
     [[ "$output" == *"Usage:"* ]]
 }
 
-@test "smalltalk -h shows usage" {
+@test "st -h shows usage" {
     run "$SMALLTALK_CMD" -h
     [ "$status" -eq 0 ]
     [[ "$output" == *"Usage:"* ]]
 }
 
-@test "smalltalk help shows usage" {
+@test "st help shows usage" {
     run "$SMALLTALK_CMD" help
     [ "$status" -eq 0 ]
     [[ "$output" == *"Usage:"* ]]
@@ -172,43 +172,43 @@ teardown() {
 # Implementation Validation Tests
 # ============================================================================
 
-@test "smalltalk with unknown implementation shows error" {
+@test "st with unknown implementation shows error" {
     run "$SMALLTALK_CMD" unknownimpl version
     [ "$status" -eq 1 ]
     [[ "$output" == *"Unknown implementation"* ]]
 }
 
-@test "smalltalk pharo without command shows error" {
+@test "st pharo without command shows error" {
     run "$SMALLTALK_CMD" pharo
     [ "$status" -eq 1 ]
     [[ "$output" == *"No command specified"* ]]
 }
 
-@test "smalltalk gt without command shows error" {
+@test "st gt without command shows error" {
     run "$SMALLTALK_CMD" gt
     [ "$status" -eq 1 ]
     [[ "$output" == *"No command specified"* ]]
 }
 
-@test "smalltalk squeak without command shows error" {
+@test "st squeak without command shows error" {
     run "$SMALLTALK_CMD" squeak
     [ "$status" -eq 1 ]
     [[ "$output" == *"No command specified"* ]]
 }
 
-@test "smalltalk cuis without command shows error" {
+@test "st cuis without command shows error" {
     run "$SMALLTALK_CMD" cuis
     [ "$status" -eq 1 ]
     [[ "$output" == *"No command specified"* ]]
 }
 
-@test "smalltalk gnu without command shows error" {
+@test "st gnu without command shows error" {
     run "$SMALLTALK_CMD" gnu
     [ "$status" -eq 1 ]
     [[ "$output" == *"No command specified"* ]]
 }
 
-@test "smalltalk lst without command shows error" {
+@test "st lst without command shows error" {
     run "$SMALLTALK_CMD" lst
     [ "$status" -eq 1 ]
     [[ "$output" == *"No command specified"* ]]
@@ -218,43 +218,43 @@ teardown() {
 # Help Command Tests
 # ============================================================================
 
-@test "smalltalk pharo help shows help text" {
+@test "st pharo help shows help text" {
     run "$SMALLTALK_CMD" pharo help
     [ "$status" -eq 0 ]
     [[ "$output" == *"Pharo Smalltalk Commands"* ]]
-    [[ "$output" == *"Usage: smalltalk pharo"* ]]
+    [[ "$output" == *"Usage: st pharo"* ]]
     [[ "$output" == *"install"* ]]
     [[ "$output" == *"run"* ]]
     [[ "$output" == *"search"* ]]
     [[ "$output" == *"list"* ]]
 }
 
-@test "smalltalk gt help shows help text" {
+@test "st gt help shows help text" {
     run "$SMALLTALK_CMD" gt help
     [ "$status" -eq 0 ]
     [[ "$output" == *"Glamorous Toolkit Commands"* ]]
-    [[ "$output" == *"Usage: smalltalk gt"* ]]
+    [[ "$output" == *"Usage: st gt"* ]]
 }
 
-@test "smalltalk squeak help shows help text" {
+@test "st squeak help shows help text" {
     run "$SMALLTALK_CMD" squeak help
     [ "$status" -eq 0 ]
     [[ "$output" == *"Squeak Smalltalk Commands"* ]]
 }
 
-@test "smalltalk cuis help shows help text" {
+@test "st cuis help shows help text" {
     run "$SMALLTALK_CMD" cuis help
     [ "$status" -eq 0 ]
     [[ "$output" == *"Cuis Smalltalk Commands"* ]]
 }
 
-@test "smalltalk gnu help shows help text" {
+@test "st gnu help shows help text" {
     run "$SMALLTALK_CMD" gnu help
     [ "$status" -eq 0 ]
     [[ "$output" == *"GNU Smalltalk Commands"* ]]
 }
 
-@test "smalltalk lst help shows help text" {
+@test "st lst help shows help text" {
     run "$SMALLTALK_CMD" lst help
     [ "$status" -eq 0 ]
     [[ "$output" == *"Little Smalltalk"* ]]
@@ -264,7 +264,7 @@ teardown() {
 # Help Includes Version Information
 # ============================================================================
 
-@test "smalltalk cuis help shows available versions" {
+@test "st cuis help shows available versions" {
     run "$SMALLTALK_CMD" cuis help
     [ "$status" -eq 0 ]
     [[ "$output" == *"stable"* ]]
@@ -272,7 +272,7 @@ teardown() {
     [[ "$output" == *"6.0"* ]]
 }
 
-@test "smalltalk squeak help shows available versions" {
+@test "st squeak help shows available versions" {
     run "$SMALLTALK_CMD" squeak help
     [ "$status" -eq 0 ]
     [[ "$output" == *"stable"* ]]
@@ -285,13 +285,13 @@ teardown() {
 # Unknown Command Tests
 # ============================================================================
 
-@test "smalltalk pharo with unknown command shows error" {
+@test "st pharo with unknown command shows error" {
     run "$SMALLTALK_CMD" pharo unknowncmd
     [ "$status" -eq 1 ]
     [[ "$output" == *"Unknown command"* ]]
 }
 
-@test "smalltalk gt with unknown command shows error" {
+@test "st gt with unknown command shows error" {
     run "$SMALLTALK_CMD" gt unknowncmd
     [ "$status" -eq 1 ]
     [[ "$output" == *"Unknown command"* ]]
@@ -301,7 +301,7 @@ teardown() {
 # Clap Commands Help - Pharo
 # ============================================================================
 
-@test "smalltalk pharo help includes Clap commands documentation" {
+@test "st pharo help includes Clap commands documentation" {
     run "$SMALLTALK_CMD" pharo help
     [ "$status" -eq 0 ]
     [[ "$output" == *"Clap Commands"* ]]
@@ -315,7 +315,7 @@ teardown() {
 # Clap Commands Help - GT
 # ============================================================================
 
-@test "smalltalk gt help includes Clap commands documentation" {
+@test "st gt help includes Clap commands documentation" {
     run "$SMALLTALK_CMD" gt help
     [ "$status" -eq 0 ]
     [[ "$output" == *"Clap Commands"* ]]
@@ -327,25 +327,25 @@ teardown() {
 # Version Tests
 # ============================================================================
 
-@test "smalltalk pharo version shows not installed message" {
+@test "st pharo version shows not installed message" {
     run "$SMALLTALK_CMD" pharo version
     [ "$status" -eq 1 ]
     [[ "$output" == *"not installed"* ]]
 }
 
-@test "smalltalk gt version shows not installed message" {
+@test "st gt version shows not installed message" {
     run "$SMALLTALK_CMD" gt version
     [ "$status" -eq 1 ]
     [[ "$output" == *"not installed"* ]]
 }
 
-@test "smalltalk squeak version shows not installed message" {
+@test "st squeak version shows not installed message" {
     run "$SMALLTALK_CMD" squeak version
     [ "$status" -eq 1 ]
     [[ "$output" == *"not installed"* ]]
 }
 
-@test "smalltalk cuis version shows not installed message" {
+@test "st cuis version shows not installed message" {
     run "$SMALLTALK_CMD" cuis version
     [ "$status" -eq 1 ]
     [[ "$output" == *"not installed"* ]]
@@ -355,25 +355,25 @@ teardown() {
 # Clean Tests
 # ============================================================================
 
-@test "smalltalk pharo clean succeeds" {
+@test "st pharo clean succeeds" {
     run "$SMALLTALK_CMD" pharo clean
     [ "$status" -eq 0 ]
     [[ "$output" == *"cache"* ]]
 }
 
-@test "smalltalk gt clean succeeds" {
+@test "st gt clean succeeds" {
     run "$SMALLTALK_CMD" gt clean
     [ "$status" -eq 0 ]
     [[ "$output" == *"cache"* ]]
 }
 
-@test "smalltalk squeak clean succeeds" {
+@test "st squeak clean succeeds" {
     run "$SMALLTALK_CMD" squeak clean
     [ "$status" -eq 0 ]
     [[ "$output" == *"cache"* ]]
 }
 
-@test "smalltalk cuis clean succeeds" {
+@test "st cuis clean succeeds" {
     run "$SMALLTALK_CMD" cuis clean
     [ "$status" -eq 0 ]
     [[ "$output" == *"cache"* ]]
@@ -383,13 +383,13 @@ teardown() {
 # Search Without Arguments Tests
 # ============================================================================
 
-@test "smalltalk pharo search without term shows error" {
+@test "st pharo search without term shows error" {
     run "$SMALLTALK_CMD" pharo search
     [ "$status" -eq 1 ]
     [[ "$output" == *"Please provide a search term"* ]]
 }
 
-@test "smalltalk gt search without term shows error" {
+@test "st gt search without term shows error" {
     run "$SMALLTALK_CMD" gt search
     [ "$status" -eq 1 ]
     [[ "$output" == *"Please provide a search term"* ]]
@@ -399,55 +399,55 @@ teardown() {
 # Clean Artifacts Tests
 # ============================================================================
 
-@test "smalltalk clean_artifacts shows help when no implementation" {
+@test "st clean_artifacts shows help when no implementation" {
     run "$SMALLTALK_CMD" clean_artifacts
     [ "$status" -eq 0 ]
     [[ "$output" == *"Cleaning"* ]] || [[ "$output" == *"artifacts"* ]]
 }
 
-@test "smalltalk clean_artifacts pharo succeeds" {
+@test "st clean_artifacts pharo succeeds" {
     run "$SMALLTALK_CMD" clean_artifacts pharo
     [ "$status" -eq 0 ]
     [[ "$output" == *"clean"* ]] || [[ "$output" == *"Pharo"* ]]
 }
 
-@test "smalltalk clean_artifacts gt succeeds" {
+@test "st clean_artifacts gt succeeds" {
     run "$SMALLTALK_CMD" clean_artifacts gt
     [ "$status" -eq 0 ]
     [[ "$output" == *"clean"* ]] || [[ "$output" == *"Glamorous"* ]]
 }
 
-@test "smalltalk clean_artifacts cuis succeeds" {
+@test "st clean_artifacts cuis succeeds" {
     run "$SMALLTALK_CMD" clean_artifacts cuis
     [ "$status" -eq 0 ]
     [[ "$output" == *"clean"* ]] || [[ "$output" == *"Cuis"* ]]
 }
 
-@test "smalltalk clean_artifacts squeak succeeds" {
+@test "st clean_artifacts squeak succeeds" {
     run "$SMALLTALK_CMD" clean_artifacts squeak
     [ "$status" -eq 0 ]
     [[ "$output" == *"clean"* ]] || [[ "$output" == *"Squeak"* ]]
 }
 
-@test "smalltalk pharo clean_artifacts succeeds" {
+@test "st pharo clean_artifacts succeeds" {
     run "$SMALLTALK_CMD" pharo clean_artifacts
     [ "$status" -eq 0 ]
     [[ "$output" == *"clean"* ]] || [[ "$output" == *"artifacts"* ]]
 }
 
-@test "smalltalk gt clean_artifacts succeeds" {
+@test "st gt clean_artifacts succeeds" {
     run "$SMALLTALK_CMD" gt clean_artifacts
     [ "$status" -eq 0 ]
     [[ "$output" == *"clean"* ]] || [[ "$output" == *"artifacts"* ]]
 }
 
-@test "smalltalk cuis clean_artifacts succeeds" {
+@test "st cuis clean_artifacts succeeds" {
     run "$SMALLTALK_CMD" cuis clean_artifacts
     [ "$status" -eq 0 ]
     [[ "$output" == *"clean"* ]] || [[ "$output" == *"artifacts"* ]]
 }
 
-@test "smalltalk squeak clean_artifacts succeeds" {
+@test "st squeak clean_artifacts succeeds" {
     run "$SMALLTALK_CMD" squeak clean_artifacts
     [ "$status" -eq 0 ]
     [[ "$output" == *"clean"* ]] || [[ "$output" == *"artifacts"* ]]
@@ -471,22 +471,22 @@ teardown() {
 # Install Directory Option Tests
 # ============================================================================
 
-@test "smalltalk pharo help includes install directory option" {
+@test "st pharo help includes install directory option" {
     run "$SMALLTALK_CMD" pharo help
     [[ "$output" == *"-d"* ]] || [[ "$output" == *"--dir"* ]]
 }
 
-@test "smalltalk gt help includes install directory option" {
+@test "st gt help includes install directory option" {
     run "$SMALLTALK_CMD" gt help
     [[ "$output" == *"-d"* ]] || [[ "$output" == *"--dir"* ]]
 }
 
-@test "smalltalk cuis help includes install directory option" {
+@test "st cuis help includes install directory option" {
     run "$SMALLTALK_CMD" cuis help
     [[ "$output" == *"-d"* ]] || [[ "$output" == *"--dir"* ]]
 }
 
-@test "smalltalk squeak help includes install directory option" {
+@test "st squeak help includes install directory option" {
     run "$SMALLTALK_CMD" squeak help
     [[ "$output" == *"-d"* ]] || [[ "$output" == *"--dir"* ]]
 }
@@ -512,7 +512,7 @@ teardown() {
 # Install Command Option Parsing Tests
 # ============================================================================
 
-@test "smalltalk pharo install with -d flag accepts directory" {
+@test "st pharo install with -d flag accepts directory" {
     local test_dir="$TEST_TMPDIR/test-install"
     mkdir -p "$test_dir"
     
@@ -524,7 +524,7 @@ teardown() {
     [[ "$output" != *"unrecognized option"* ]]
 }
 
-@test "smalltalk cuis install with version accepts version number" {
+@test "st cuis install with version accepts version number" {
     local test_dir="$TEST_TMPDIR/test-cuis"
     mkdir -p "$test_dir"
     
@@ -534,7 +534,7 @@ teardown() {
     [[ "$output" != *"unrecognized option"* ]]
 }
 
-@test "smalltalk squeak install with version accepts version number" {
+@test "st squeak install with version accepts version number" {
     local test_dir="$TEST_TMPDIR/test-squeak"
     mkdir -p "$test_dir"
     
@@ -548,7 +548,7 @@ teardown() {
 # Install Error Handling Tests
 # ============================================================================
 
-@test "smalltalk pharo install to non-empty directory with other Smalltalk fails" {
+@test "st pharo install to non-empty directory with other Smalltalk fails" {
     local test_dir="$TEST_TMPDIR/test-conflict"
     mkdir -p "$test_dir"
     
@@ -563,7 +563,7 @@ teardown() {
     [[ "$output" == *"already contains"* ]] || [[ "$output" == *"cuis"* ]]
 }
 
-@test "smalltalk gt install to non-empty directory with other Smalltalk fails" {
+@test "st gt install to non-empty directory with other Smalltalk fails" {
     local test_dir="$TEST_TMPDIR/test-conflict2"
     mkdir -p "$test_dir"
     
@@ -578,14 +578,14 @@ teardown() {
     [[ "$output" == *"already contains"* ]] || [[ "$output" == *"pharo"* ]]
 }
 
-@test "smalltalk cuis install with invalid version shows error" {
+@test "st cuis install with invalid version shows error" {
     run bash -c "'$SMALLTALK_CMD' cuis install invalid-version-xyz 2>&1"
     
     [ "$status" -ne 0 ]
     [[ "$output" == *"Unknown Cuis version"* ]] || [[ "$output" == *"invalid-version-xyz"* ]]
 }
 
-@test "smalltalk squeak install with invalid version shows error" {
+@test "st squeak install with invalid version shows error" {
     run bash -c "'$SMALLTALK_CMD' squeak install invalid-version-xyz 2>&1"
     
     [ "$status" -ne 0 ]
@@ -653,7 +653,7 @@ teardown() {
 # Cuis Version Tests
 # ============================================================================
 
-@test "smalltalk cuis install with version stable works" {
+@test "st cuis install with version stable works" {
     local test_dir="$TEST_TMPDIR/test-cuis-stable"
     mkdir -p "$test_dir"
     
@@ -663,7 +663,7 @@ teardown() {
     [[ "$output" != *"unrecognized option"* ]]
 }
 
-@test "smalltalk cuis install version and directory together" {
+@test "st cuis install version and directory together" {
     local test_dir="$TEST_TMPDIR/test-cuis-combined"
     mkdir -p "$test_dir"
     
@@ -677,7 +677,7 @@ teardown() {
 # Squeak Version Tests
 # ============================================================================
 
-@test "smalltalk squeak install with version stable works" {
+@test "st squeak install with version stable works" {
     local test_dir="$TEST_TMPDIR/test-squeak-stable"
     mkdir -p "$test_dir"
     
@@ -687,7 +687,7 @@ teardown() {
     [[ "$output" != *"unrecognized option"* ]]
 }
 
-@test "smalltalk squeak install version and directory together" {
+@test "st squeak install version and directory together" {
     local test_dir="$TEST_TMPDIR/test-squeak-combined"
     mkdir -p "$test_dir"
     

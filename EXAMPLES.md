@@ -20,45 +20,45 @@ A collection of examples for using the `smalltalk` CLI to manage Smalltalk imple
 
 ```bash
 # Install Pharo
-smalltalk pharo install
+st pharo install
 
 # Install Cuis
-smalltalk cuis install
+st cuis install
 
 # Install Squeak
-smalltalk squeak install
+st squeak install
 
 # Install Glamorous Toolkit
-smalltalk gt install
+st gt install
 
 # Install GNU Smalltalk
-smalltalk gnu install
+st gnu install
 
 # Install Little Smalltalk
-smalltalk lst install
+st lst install
 ```
 
 ### Install to a specific directory
 
 ```bash
-smalltalk pharo install -d ~/smalltalk/pharo
-smalltalk cuis install -d ~/smalltalk/cuis
-smalltalk squeak install -d ~/smalltalk/squeak
+st pharo install -d ~/smalltalk/pharo
+st cuis install -d ~/smalltalk/cuis
+st squeak install -d ~/smalltalk/squeak
 ```
 
 ### Install a specific version
 
 ```bash
 # Cuis versions
-smalltalk cuis install stable    # Latest stable (default)
-smalltalk cuis install 7.0       # Cuis 7.0
-smalltalk cuis install 6.0       # Cuis 6.0
+st cuis install stable    # Latest stable (default)
+st cuis install 7.0       # Cuis 7.0
+st cuis install 6.0       # Cuis 6.0
 
 # Squeak versions
-smalltalk squeak install stable  # Latest stable (default)
-smalltalk squeak install 6.0     # Squeak 6.0
-smalltalk squeak install 5.4     # Squeak 5.4
-smalltalk squeak install 5.3     # Squeak 5.3
+st squeak install stable  # Latest stable (default)
+st squeak install 6.0     # Squeak 6.0
+st squeak install 5.4     # Squeak 5.4
+st squeak install 5.3     # Squeak 5.3
 ```
 
 ## Pharo
@@ -67,49 +67,49 @@ smalltalk squeak install 5.3     # Squeak 5.3
 
 ```bash
 # Install latest Pharo to current directory
-smalltalk pharo install
+st pharo install
 
 # Install to specific directory
-smalltalk pharo install -d ~/my-pharo
+st pharo install -d ~/my-pharo
 ```
 
 ### Run Pharo
 
 ```bash
 # Launch Pharo UI
-smalltalk pharo run
+st pharo run
 
 # Evaluate Smalltalk code directly
-smalltalk pharo run eval '1 + 2'
-smalltalk pharo run eval 'Date today'
+st pharo run eval '1 + 2'
+st pharo run eval 'Date today'
 
 # Run a Smalltalk script file
-smalltalk pharo run st myscript.st
+st pharo run st myscript.st
 
 # Save the image
-smalltalk pharo run save
+st pharo run save
 
 # Install a Metacello baseline
-smalltalk pharo run metacello 'BaselineOfSeaside3'
+st pharo run metacello 'BaselineOfSeaside3'
 ```
 
 ### Pharo Package Management
 
 ```bash
 # Search for packages
-smalltalk pharo search seaside
+st pharo search seaside
 
 # List cached packages
-smalltalk pharo list
+st pharo list
 
 # Update package cache
-smalltalk pharo update
+st pharo update
 ```
 
 ### Get Pharo Version
 
 ```bash
-smalltalk pharo version
+st pharo version
 ```
 
 ## Cuis
@@ -118,34 +118,34 @@ smalltalk pharo version
 
 ```bash
 # Install latest stable Cuis
-smalltalk cuis install
+st cuis install
 
 # Install specific version
-smalltalk cuis install 7.0
-smalltalk cuis install 6.0
+st cuis install 7.0
+st cuis install 6.0
 
 # Install to directory
-smalltalk cuis install -d ~/cuis
+st cuis install -d ~/cuis
 ```
 
 ### Run Cuis
 
 ```bash
-smalltalk cuis run
+st cuis run
 ```
 
 ### Cuis Package Search
 
 ```bash
-smalltalk cuis search morphic
-smalltalk cuis update
-smalltalk cuis list
+st cuis search morphic
+st cuis update
+st cuis list
 ```
 
 ### Get Cuis Version
 
 ```bash
-smalltalk cuis version
+st cuis version
 ```
 
 ## Squeak
@@ -154,34 +154,34 @@ smalltalk cuis version
 
 ```bash
 # Install latest stable Squeak
-smalltalk squeak install
+st squeak install
 
 # Install specific version
-smalltalk squeak install 6.0
-smalltalk squeak install 5.4
+st squeak install 6.0
+st squeak install 5.4
 
 # Install to directory
-smalltalk squeak install -d ~/squeak
+st squeak install -d ~/squeak
 ```
 
 ### Run Squeak
 
 ```bash
-smalltalk squeak run
+st squeak run
 ```
 
 ### Squeak Package Search
 
 ```bash
-smalltalk squeak search seaside
-smalltalk squeak update
-smalltalk squeak list
+st squeak search seaside
+st squeak update
+st squeak list
 ```
 
 ### Get Squeak Version
 
 ```bash
-smalltalk squeak version
+st squeak version
 ```
 
 ## Glamorous Toolkit
@@ -190,32 +190,32 @@ smalltalk squeak version
 
 ```bash
 # Install to current directory
-smalltalk gt install
+st gt install
 
 # Install to specific directory
-smalltalk gt install -d ~/gt
+st gt install -d ~/gt
 ```
 
 ### Run Glamorous Toolkit
 
 ```bash
 # Launch GT UI
-smalltalk gt run
+st gt run
 
 # Evaluate Smalltalk code
-smalltalk gt run eval '1 + 2'
+st gt run eval '1 + 2'
 
 # Run a Smalltalk script
-smalltalk gt run st myscript.st
+st gt run st myscript.st
 
 # Install a Metacello baseline
-smalltalk gt run metacello 'BaselineOfPhexample'
+st gt run metacello 'BaselineOfPhexample'
 ```
 
 ### GT Version
 
 ```bash
-smalltalk gt version
+st gt version
 ```
 
 ## GNU Smalltalk
@@ -224,29 +224,29 @@ smalltalk gt version
 
 ```bash
 # Install via system package manager
-smalltalk gnu install
+st gnu install
 
 # Build from source (requires development tools)
-smalltalk gnu install --source
+st gnu install --source
 ```
 
 ### Run GNU Smalltalk
 
 ```bash
 # Start REPL
-smalltalk gnu run
+st gnu run
 
 # Run a script file
-smalltalk gnu run script.st
+st gnu run script.st
 
 # Run script and exit
-smalltalk gnu run -i script.st
+st gnu run -i script.st
 ```
 
 ### Get GNU Smalltalk Version
 
 ```bash
-smalltalk gnu version
+st gnu version
 ```
 
 ## Little Smalltalk
@@ -255,26 +255,26 @@ smalltalk gnu version
 
 ```bash
 # Download prebuilt binary
-smalltalk lst install
+st lst install
 
 # Build from source
-smalltalk lst install --build
+st lst install --build
 ```
 
 ### Run Little Smalltalk
 
 ```bash
 # Start REPL
-smalltalk lst run
+st lst run
 
 # Run with arguments
-smalltalk lst run arg1 arg2
+st lst run arg1 arg2
 ```
 
 ### Get LST Version
 
 ```bash
-smalltalk lst version
+st lst version
 ```
 
 ## Package Management
@@ -283,35 +283,35 @@ smalltalk lst version
 
 ```bash
 # Search Pharo packages
-smalltalk pharo search polyglot
-smalltalk pharo search seaside
+st pharo search polyglot
+st pharo search seaside
 
 # Search GT packages
-smalltalk gt search debugger
+st gt search debugger
 
 # Search Cuis packages
-smalltalk cuis search morphic
+st cuis search morphic
 
 # Search Squeak packages
-smalltalk squeak search seaside
+st squeak search seaside
 ```
 
 ### List Cached Packages
 
 ```bash
-smalltalk pharo list
-smalltalk gt list
-smalltalk cuis list
-smalltalk squeak list
+st pharo list
+st gt list
+st cuis list
+st squeak list
 ```
 
 ### Update Package Cache
 
 ```bash
-smalltalk pharo update
-smalltalk gt update
-smalltalk cuis update
-smalltalk squeak update
+st pharo update
+st gt update
+st cuis update
+st squeak update
 ```
 
 ## Maintenance
@@ -320,38 +320,38 @@ smalltalk squeak update
 
 ```bash
 # Clean all caches
-smalltalk pharo clean
-smalltalk gt clean
-smalltalk cuis clean
-smalltalk squeak clean
+st pharo clean
+st gt clean
+st cuis clean
+st squeak clean
 ```
 
 ### Clean Installed Artifacts
 
 ```bash
 # Clean all Smalltalk artifacts
-smalltalk clean_artifacts
+st clean_artifacts
 
 # Clean specific implementation artifacts
-smalltalk clean_artifacts pharo
-smalltalk clean_artifacts gt
-smalltalk clean_artifacts cuis
-smalltalk clean_artifacts squeak
+st clean_artifacts pharo
+st clean_artifacts gt
+st clean_artifacts cuis
+st clean_artifacts squeak
 ```
 
 ### Help
 
 ```bash
 # General help
-smalltalk --help
+st --help
 
 # Implementation-specific help
-smalltalk pharo help
-smalltalk gt help
-smalltalk cuis help
-smalltalk squeak help
-smalltalk gnu help
-smalltalk lst help
+st pharo help
+st gt help
+st cuis help
+st squeak help
+st gnu help
+st lst help
 ```
 
 ## Common Workflows
@@ -360,16 +360,16 @@ smalltalk lst help
 
 ```bash
 # 1. Install Pharo
-smalltalk pharo install -d ~/smalltalk
+st pharo install -d ~/smalltalk
 
 # 2. Run it to verify
-smalltalk pharo run
+st pharo run
 
 # 3. Search for a package
-smalltalk pharo search seaside
+st pharo search seaside
 
 # 4. Install a package (in Pharo image)
-smalltalk pharo run metacello 'BaselineOfSeaside3'
+st pharo run metacello 'BaselineOfSeaside3'
 ```
 
 ### Multiple Implementations
@@ -379,16 +379,16 @@ smalltalk pharo run metacello 'BaselineOfSeaside3'
 mkdir ~/smalltalk
 cd ~/smalltalk
 
-smalltalk pharo install -d pharo
-smalltalk gt install -d gt
-smalltalk cuis install -d cuis
-smalltalk squeak install -d squeak
+st pharo install -d pharo
+st gt install -d gt
+st cuis install -d cuis
+st squeak install -d squeak
 
 # Run each one
-cd pharo && smalltalk pharo run
-cd ../gt && smalltalk gt run
-cd ../cuis && smalltalk cuis run
-cd ../squeak && smalltalk squeak run
+cd pharo && st pharo run
+cd ../gt && st gt run
+cd ../cuis && st cuis run
+cd ../squeak && st squeak run
 ```
 
 ### Clean Up
@@ -396,8 +396,8 @@ cd ../squeak && smalltalk squeak run
 ```bash
 # Before reinstalling, clean old artifacts
 cd ~/smalltalk/pharo
-smalltalk clean_artifacts
+st clean_artifacts
 
 # Then reinstall
-smalltalk pharo install
+st pharo install
 ```

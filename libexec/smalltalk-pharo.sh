@@ -189,7 +189,7 @@ download_pharo_alternative() {
 # Run Pharo
 run_pharo() {
     local pharo_dir
-    pharo_dir=$(is_pharo_installed) || die "Pharo is not installed. Run 'smalltalk pharo install' first."
+    pharo_dir=$(is_pharo_installed) || die "Pharo is not installed. Run 'st pharo install' first."
 
     cd "$pharo_dir" || die "Cannot change to Pharo directory"
 
@@ -270,7 +270,7 @@ install_pharo_package() {
     if [[ "$match_count" -gt 1 ]]; then
         log_info "Found $match_count packages. Showing first 10:"
         jq -r '.items[0:10] | .[] | "\(.full_name)\n  \(.description // "No description")\n"' "$search_results"
-        log_info "Please use the full package name: smalltalk pharo install <owner>/<repo>"
+        log_info "Please use the full package name: st pharo install <owner>/<repo>"
         return 1
     fi
 
@@ -323,7 +323,7 @@ smalltalk_pharo_help() {
 Pharo Smalltalk Commands
 =======================
 
-Usage: smalltalk [-x] pharo <command> [options]
+Usage: st [-x] pharo <command> [options]
 
 Commands:
   install [-d dir] [packages...]  Install Pharo with optional packages
@@ -342,13 +342,13 @@ Options:
 Debug Mode:
   -x, --debug             Enable debug mode (set -x tracing)
                           Must be specified before implementation name
-                          Example: smalltalk -x pharo install
+                          Example: st -x pharo install
 
 Package Installation:
   Multiple packages can be specified after the install command:
-  smalltalk pharo install Seaside NeoCSV
+  st pharo install Seaside NeoCSV
 
-Clap Commands (run as: smalltalk pharo run <cmd>):
+Clap Commands (run as: st pharo run <cmd>):
   metacello <spec>         Install Metacello baseline/configuration
   st <file.st>           Load and execute .st source file
   save [name]            Save the image
@@ -357,15 +357,15 @@ Clap Commands (run as: smalltalk pharo run <cmd>):
   fuel <file.fuel>       Load fuel file
 
 Examples:
-  smalltalk pharo install                  # Install Pharo
-  smalltalk pharo install -d ~/my-pharo    # Install to specific directory
-  smalltalk pharo install Seaside          # Install Pharo with Seaside package
-  smalltalk pharo install Seaside NeoCSV   # Install with multiple packages
-  smalltalk pharo install -d ~/p Seaside   # Install to directory with package
-  smalltalk -x pharo install               # Install with debug output
-  smalltalk pharo run                      # Run Pharo
-  smalltalk pharo search polyglot          # Search for packages
-  smalltalk pharo clean-artifacts          # Clean installed files
+  st pharo install                  # Install Pharo
+  st pharo install -d ~/my-pharo    # Install to specific directory
+  st pharo install Seaside          # Install Pharo with Seaside package
+  st pharo install Seaside NeoCSV   # Install with multiple packages
+  st pharo install -d ~/p Seaside   # Install to directory with package
+  st -x pharo install               # Install with debug output
+  st pharo run                      # Run Pharo
+  st pharo search polyglot          # Search for packages
+  st pharo clean-artifacts          # Clean installed files
 
 EOF
 }
@@ -383,7 +383,7 @@ smalltalk_pharo_install() {
                     shift 2
                 else
                     log_error "Option -d requires a directory argument"
-                    echo "Usage: smalltalk pharo install [-d <dir>] [package1 package2 ...]"
+                    echo "Usage: st pharo install [-d <dir>] [package1 package2 ...]"
                     return 1
                 fi
                 ;;
@@ -393,7 +393,7 @@ smalltalk_pharo_install() {
                 ;;
             -*)
                 log_error "Unknown option: $1"
-                echo "Usage: smalltalk pharo install [-d <dir>] [package1 package2 ...]"
+                echo "Usage: st pharo install [-d <dir>] [package1 package2 ...]"
                 return 1
                 ;;
             *)
@@ -475,7 +475,7 @@ smalltalk_pharo_run() {
             shift
             local spec="$*"
             if [[ -z "$spec" ]]; then
-                log_error "Usage: smalltalk pharo run metacello <baseline-spec>"
+                log_error "Usage: st pharo run metacello <baseline-spec>"
                 return 1
             fi
             ./pharo --headless Pharo.image metacello install "$spec" --save
@@ -483,7 +483,7 @@ smalltalk_pharo_run() {
         st)
             local st_file="${1:-}"
             if [[ -z "$st_file" ]]; then
-                log_error "Usage: smalltalk pharo run st <file.st>"
+                log_error "Usage: st pharo run st <file.st>"
                 return 1
             fi
             ./pharo --headless Pharo.image load "$st_file"
@@ -503,7 +503,7 @@ smalltalk_pharo_run() {
             shift
             local code="$*"
             if [[ -z "$code" ]]; then
-                log_error "Usage: smalltalk pharo run eval <code>"
+                log_error "Usage: st pharo run eval <code>"
                 return 1
             fi
             ./pharo --headless Pharo.image eval "$code"
@@ -511,7 +511,7 @@ smalltalk_pharo_run() {
         fuel)
             local fuel_file="${1:-}"
             if [[ -z "$fuel_file" ]]; then
-                log_error "Usage: smalltalk pharo run fuel <file.fuel>"
+                log_error "Usage: st pharo run fuel <file.fuel>"
                 return 1
             fi
             ./pharo --headless Pharo.image fuel load "$fuel_file"
@@ -521,7 +521,7 @@ smalltalk_pharo_run() {
             ;;
         *)
             log_error "Unknown command: $cmd"
-            echo "Run 'smalltalk pharo help' for available commands"
+            echo "Run 'st pharo help' for available commands"
             return 1
             ;;
     esac
@@ -532,7 +532,7 @@ smalltalk_pharo_search() {
 
     if [[ -z "$search_term" ]]; then
         log_error "Please provide a search term"
-        echo "Usage: smalltalk pharo search <term>"
+        echo "Usage: st pharo search <term>"
         exit 1
     fi
 
