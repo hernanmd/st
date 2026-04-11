@@ -57,7 +57,8 @@ install_gnustack_from_source() {
     local archive_name="smalltalk-${GNUSTACK_VERSION}.tar.xz"
     local download_url="${GNUSTACK_URL_BASE}/${archive_name}"
 
-    log_info "Downloading GNU Smalltalk ${GNUSTACK_VERSION}..."
+        install_dir="$(pwd)"
+    log_info "Downloading GNU Smalltalk ${GNUSTACK_VERSION} to ${install_dir}..."
     download_file "$download_url" "$archive_name"
 
     if [[ ! -f "$archive_name" ]]; then
@@ -90,7 +91,7 @@ install_gnustack_from_source() {
         log_info "Add this to your PATH: export PATH=\"$bin_dir:\$PATH\""
     fi
 
-    log_success "GNU Smalltalk installed successfully"
+    log_success "GNU Smalltalk installed successfully to ${install_dir}"
 }
 
 # Install via package manager with user confirmation

@@ -54,7 +54,7 @@ is_lst_installed() {
 download_lst_source() {
     local install_dir="${1:-$HOME/lst3r}"
 
-    log_info "Downloading Little Smalltalk v3 source..."
+    log_info "Downloading Little Smalltalk v3 source to ${install_dir}..."
 
     # Ensure the directory exists
     mkdir -p "$install_dir"
@@ -98,14 +98,14 @@ download_lst_source() {
     log_info "LST installed to: $install_dir/lst3r"
     log_info "Add $install_dir to your PATH to use 'lst3r' directly"
 
-    log_success "Little Smalltalk v3 installed successfully"
+    log_success "Little Smalltalk v3 installed successfully to ${install_dir}"
 }
 
 # Download prebuilt LST binary
 download_lst_binary() {
     local install_dir="${1:-.}"
 
-    log_info "Downloading Little Smalltalk v3..."
+    log_info "Downloading Little Smalltalk v3 to ${install_dir}..."
 
     local os_type
     os_type=$(get_os)
@@ -116,6 +116,7 @@ download_lst_binary() {
     mkdir -p "$install_dir"
     cd "$install_dir" || die "Cannot change to directory: $install_dir"
 
+    install_dir="$(pwd)"
     local download_url
     local archive_name
 

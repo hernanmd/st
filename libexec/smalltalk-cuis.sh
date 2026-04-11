@@ -203,7 +203,7 @@ download_cuis() {
     local version="${1:-$CUIS_VERSION}"
     local install_dir="${2:-.}"
 
-    log_info "Downloading Cuis ${version}..."
+    log_info "Downloading Cuis ${version} to ${install_dir}..."
 
     local download_url
     download_url=$(get_cuis_url "$version")
@@ -214,6 +214,7 @@ download_cuis() {
     ensure_install_dir "$install_dir"
     mkdir -p "$install_dir"
     cd "$install_dir" || die "Cannot change to directory: $install_dir"
+    install_dir="$(pwd)"
 
     local archive_name="Cuis-${version}.zip"
     local temp_dir
@@ -254,7 +255,7 @@ download_cuis() {
     shopt -u nullglob
 
     if $has_launcher; then
-        log_success "Cuis ${version} installed successfully"
+        log_success "Cuis ${version} installed successfully to ${install_dir}"
 
 
         # Register files

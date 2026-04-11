@@ -323,6 +323,7 @@ download_squeak() {
     ensure_install_dir "$install_dir"
     mkdir -p "$install_dir"
     cd "$install_dir" || die "Cannot change to directory: $install_dir"
+    install_dir="$(pwd)"
 
     local archive_name="Squeak-${version}.zip"
     local temp_dir
@@ -480,7 +481,7 @@ download_squeak() {
         die "Please check the extracted files manually"
     fi
 
-    log_success "Squeak ${version} installed successfully"
+    log_success "Squeak ${version} installed successfully to ${install_dir}"
 
     # Register files
     local files=()

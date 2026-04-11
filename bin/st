@@ -26,7 +26,7 @@ source "${LIBEXEC_DIR}/smalltalk-common.sh"
 # Print usage information
 print_usage() {
     cat << 'EOF'
-st - A unified CLI for Smalltalk implementations
+st - A Universal Smalltalk CLI
 
 Usage: st [--debug] <implementation> <command> [options]
 

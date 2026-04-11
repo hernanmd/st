@@ -91,6 +91,7 @@ download_gt() {
     ensure_install_dir "$install_dir"
     mkdir -p "$install_dir"
     cd "$install_dir" || die "Cannot change to directory: $install_dir"
+    install_dir="$(pwd)"
 
     local archive_file
     archive_file=$(mktemp)

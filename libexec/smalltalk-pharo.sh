@@ -158,6 +158,7 @@ download_pharo() {
     ensure_install_dir "$install_dir"
     mkdir -p "$install_dir"
     cd "$install_dir" || die "Cannot change to directory: $install_dir"
+    install_dir="$(pwd)"
 
     # Clear any existing installation to ensure fresh download
     log_debug "Cleaning existing installation files..."
