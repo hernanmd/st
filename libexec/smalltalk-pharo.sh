@@ -163,15 +163,28 @@ download_pharo() {
     log_debug "Cleaning existing installation files..."
     rm -rf Pharo*.image Pharo*.changes Pharo*.sources pharo pharo-ui pharo-vm Pharo.app 2>/dev/null || true
 
-    # Use get.pharo.org installer which handles architecture detection
-    # The script detects ARM64 automatically for Apple Silicon
-    log_info "Running Pharo installer (architecture detection: $arch)..."
+    # Determine architecture bits for get.pharo.org URL pattern
+    # get.pharo.org/64/ for 64-bit (x86_64, arm64, aarch64)
+    # get.pharo.org/32/ for 32-bit (i386, i686)
+    local arch_bits=64
+    case "$arch" in
+        i386|i686|armv7|arm32)
+            arch_bits=32
+            ;;
+        *)
+            # Default to 64-bit for x86_64, arm64, aarch64, etc.
+            arch_bits=64
+            ;;
+    esac
+    
+    # Use get.pharo.org installer with explicit architecture bits
+    # Pattern: get.pharo.org/<arch_bits>/<version>+vm
+    log_info "Running Pharo installer (${arch_bits}-bit for ${arch} on ${os_type})..."
     
     if cmd_exists curl; then
-        # Pass architecture explicitly via environment for proper VM detection
-        curl -fsSL "https://get.pharo.org/${version}+vm" 2>/dev/null | bash
+        curl -fsSL "https://get.pharo.org/${arch_bits}/${version}+vm" 2>/dev/null | bash
     elif cmd_exists wget; then
-        wget -qO- "https://get.pharo.org/${version}+vm" 2>/dev/null | bash
+        wget -qO- "https://get.pharo.org/${arch_bits}/${version}+vm" 2>/dev/null | bash
     else
         die "Neither curl nor wget is installed"
     fi
@@ -227,7 +240,7 @@ download_pharo_alternative() {
     # Note: Pharo GitHub releases use different naming conventions
     case "$os_type" in
         macos)
-            # macOS unified binary works on both Intel and Apple Silicon via Rosetta if needed
+            # macOS 64-bit binary - Pharo supports Apple Silicon natively
             download_url="https://github.com/pharo-project/pharo/releases/download/P${version}/Pharo-${version}-mac64.zip"
             ;;
         linux)
