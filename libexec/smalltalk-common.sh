@@ -337,32 +337,84 @@ clean_all_artifacts() {
 #################################
 
 # Logging functions
+#################################
+## Logging & Colors
+#################################
+
+# Color codes (disabled if NO_COLOR is set)
+if [[ -z "${NO_COLOR:-}" ]] && [[ -t 1 ]]; then
+    COLOR_INFO='\033[1;33m'    # Bold yellow
+    COLOR_ERROR='\033[1;31m'   # Bold red
+    COLOR_SUCCESS='\033[1;32m' # Bold green
+    COLOR_WARN='\033[1;35m'    # Bold magenta
+    COLOR_DEBUG='\033[0;36m'    # Cyan
+    COLOR_RESET='\033[0m'
+else
+    COLOR_INFO=''
+    COLOR_ERROR=''
+    COLOR_SUCCESS=''
+    COLOR_WARN=''
+    COLOR_DEBUG=''
+    COLOR_RESET=''
+fi
+
 log_info() {
-    printf "[INFO] %s\n" "$*"
+    printf "${COLOR_INFO}[INFO] %s${COLOR_RESET}\n" "$*"
 }
 
 log_error() {
-    printf "[ERROR] %s\n" "$*" >&2
+    printf "${COLOR_ERROR}[ERROR] %s${COLOR_RESET}\n" "$*" >&2
 }
 
 log_success() {
-    printf "[SUCCESS] %s\n" "$*"
+    printf "${COLOR_SUCCESS}[SUCCESS] %s${COLOR_RESET}\n" "$*"
 }
 
 log_debug() {
     if [[ "${DEBUG:-0}" == "1" ]]; then
-        printf "[DEBUG] %s\n" "$*"
+        printf "${COLOR_DEBUG}[DEBUG] %s${COLOR_RESET}\n" "$*"
     fi
 }
 
 log_warn() {
-    printf "[WARN] %s\n" "$*"
+    printf "${COLOR_WARN}[WARN] %s${COLOR_RESET}\n" "$*"
 }
 
 # Print error and exit
 die() {
     log_error "$*"
     exit 1
+}
+
+# Get the directory containing the script (resolves symlinks)
+get_script_dir() {
+    local source="${BASH_SOURCE[0]}"
+    while [[ -L "$source" ]]; do
+        source=$(readlink "$source")
+    done
+    echo "$(cd "$(dirname "$source")" && pwd)"
+}
+
+# Load help text from a markdown file in doc/ directory
+load_help_from_doc() {
+    local impl_name="$1"  # e.g., "pharo", "squeak", "cuis"
+    local doc_dir
+    
+    # Get the libexec directory and go up to project root
+    local libexec_dir
+    libexec_dir=$(get_script_dir)
+    local project_root
+    project_root=$(cd "${libexec_dir}/.." && pwd)
+    
+    local help_file="${project_root}/doc/HELP_${impl_name}.md"
+    
+    if [[ -f "$help_file" ]]; then
+        cat "$help_file"
+    else
+        # Fallback error message
+        printf "Help file not found: %s\n" "$help_file" >&2
+        return 1
+    fi
 }
 
 # Check if a command exists
@@ -426,15 +478,17 @@ get_arch() {
     echo "$arch"
 }
 
-# Download file using curl or wget
+# Download file using curl or wget with progress bar
 download_file() {
     local url="$1"
     local output="$2"
 
     if cmd_exists curl; then
-        curl -fsSL "$url" -o "$output"
+        # -#: progress bar, -L: follow redirects, -C: resume support
+        curl -# -L -C - -o "$output" "$url"
     elif cmd_exists wget; then
-        wget -q "$url" -O "$output"
+        # --progress=bar:dot: progress bar, -c: continue (resume)
+        wget --progress=bar:dot -c -O "$output" "$url"
     else
         die "Neither curl nor wget is installed"
     fi
