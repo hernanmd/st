@@ -508,14 +508,12 @@ extract_archive() {
     local archive="$1"
     local dest_dir="${2:-.}"
     
-    # Build extraction flags based on VERBOSE setting
-    local tar_flags="-f"
-    local unzip_flags="-q"
+    # Always use -x (extract), add -v only if VERBOSE is set
+    local tar_flags="-x"
+    [[ "${VERBOSE:-0}" == "1" ]] && tar_flags="-xv"
     
-    if [[ "${VERBOSE:-0}" == "1" ]]; then
-        tar_flags="-xvf"
-        unzip_flags=""
-    fi
+    local unzip_flags="-q"
+    [[ "${VERBOSE:-0}" == "1" ]] && unzip_flags=""
 
     case "$archive" in
         *.zip)

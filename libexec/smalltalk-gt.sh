@@ -257,7 +257,10 @@ smalltalk_gt_run() {
             timestamp=$(date +%Y%m%d_%H%M%S)
             gt_dir="GlamorousToolkit_${timestamp}"
             log_info "Creating directory: $gt_dir"
+            # download_gt changes to the install directory and updates install_dir
             download_gt "$GT_VERSION" "$gt_dir"
+            # Get the actual path after download
+            gt_dir="$(pwd)/GlamorousToolkit_${timestamp}"
         }
     fi
     
