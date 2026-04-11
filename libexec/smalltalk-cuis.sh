@@ -74,19 +74,40 @@ list_cuis_versions() {
 
 # Check if Cuis is installed
 is_cuis_installed() {
-    # First check current directory
-    if [[ -f "./Cuis.image" ]] && [[ -f "./Cuis.changes" ]]; then
-        echo "$(pwd)"
-        return 0
-    fi
+    # First check current directory for Cuis*.image
+    shopt -s nullglob
+    for img in Cuis*.image; do
+        if [[ -f "$img" ]]; then
+            local changes="${img%.image}.changes"
+            if [[ -f "$changes" ]]; then
+                shopt -u nullglob
+                echo "$(pwd)"
+                return 0
+            fi
+        fi
+    done
+    shopt -u nullglob
     
-    # Check for timestamped directories in current directory (e.g., Cuis-7.6_20240410_220002)
+    # Check for timestamped directories (e.g., Cuis-stable_20240410_220002)
     shopt -s nullglob
     for dir in Cuis-*; do
-        if [[ -d "$dir" ]] && [[ -f "${dir}/Cuis.image" ]] && [[ -f "${dir}/Cuis.changes" ]]; then
-            shopt -u nullglob
-            echo "$(pwd)/$dir"
-            return 0
+        if [[ -d "$dir" ]]; then
+            for img in "$dir"/Cuis*.image; do
+                if [[ -f "$img" ]]; then
+                    local changes="${img%.image}.changes"
+                    if [[ -f "$changes" ]]; then
+                        shopt -u nullglob
+                        echo "$(pwd)/$dir"
+                        return 0
+                    fi
+                fi
+            done
+            # Also check for Cuis7-6-main style directory
+            if [[ -f "$dir/CuisImage"/*.image ]]; then
+                shopt -u nullglob
+                echo "$(pwd)/$dir"
+                return 0
+            fi
         fi
     done
     shopt -u nullglob
@@ -94,17 +115,27 @@ is_cuis_installed() {
     # Check for Cuis in common locations
     local search_dirs=("$HOME/Cuis" "$HOME/cuis" "$HOME/.local/share/cuis")
     for dir in "${search_dirs[@]}"; do
-        if [[ -f "${dir}/Cuis.image" ]] && [[ -f "${dir}/Cuis.changes" ]]; then
-            echo "$dir"
-            return 0
-        fi
-        # Also check subdirectories
         shopt -s nullglob
+        for img in "$dir"/Cuis*.image; do
+            if [[ -f "$img" ]]; then
+                local changes="${img%.image}.changes"
+                if [[ -f "$changes" ]]; then
+                    shopt -u nullglob
+                    echo "$dir"
+                    return 0
+                fi
+            fi
+        done
+        # Also check subdirectories
         for subdir in "$dir"/Cuis-*; do
-            if [[ -d "$subdir" ]] && [[ -f "${subdir}/Cuis.image" ]] && [[ -f "${subdir}/Cuis.changes" ]]; then
-                shopt -u nullglob
-                echo "$subdir"
-                return 0
+            if [[ -d "$subdir" ]]; then
+                for img in "$subdir"/Cuis*.image "$subdir"/CuisImage/*.image; do
+                    if [[ -f "$img" ]]; then
+                        shopt -u nullglob
+                        echo "$subdir"
+                        return 0
+                    fi
+                done
             fi
         done
         shopt -u nullglob
@@ -115,24 +146,45 @@ is_cuis_installed() {
 
 # Find Cuis installation relative to current directory
 find_cuis_in_current_dir() {
-    # Check current directory
-    if [[ -f "./Cuis.image" ]] && [[ -f "./Cuis.changes" ]]; then
-        echo "$(pwd)"
-        return 0
-    fi
-    
-    # Check for timestamped directories
+    # Check current directory for Cuis*.image
     shopt -s nullglob
     local latest_dir=""
     local latest_time=0
     
+    for img in Cuis*.image; do
+        if [[ -f "$img" ]]; then
+            shopt -u nullglob
+            echo "$(pwd)"
+            return 0
+        fi
+    done
+    shopt -u nullglob
+    
+    # Check for timestamped directories
     for dir in Cuis-*; do
-        if [[ -d "$dir" ]] && [[ -f "${dir}/Cuis.image" ]]; then
-            local mtime
-            mtime=$(stat -f %m "$dir" 2>/dev/null || stat -c %Y "$dir" 2>/dev/null || echo 0)
-            if [[ "$mtime" -gt "$latest_time" ]]; then
-                latest_time="$mtime"
-                latest_dir="$dir"
+        if [[ -d "$dir" ]]; then
+            for img in "$dir"/Cuis*.image; do
+                if [[ -f "$img" ]]; then
+                    local mtime
+                    mtime=$(stat -f %m "$dir" 2>/dev/null || stat -c %Y "$dir" 2>/dev/null || echo 0)
+                    if [[ "$mtime" -gt "$latest_time" ]]; then
+                        latest_time="$mtime"
+                        latest_dir="$dir"
+                    fi
+                fi
+            done
+            # Also check for CuisImage subdirectory (Cuis7-6-main style)
+            if [[ -d "$dir/CuisImage" ]]; then
+                for img in "$dir/CuisImage"/*.image; do
+                    if [[ -f "$img" ]]; then
+                        local mtime
+                        mtime=$(stat -f %m "$dir" 2>/dev/null || stat -c %Y "$dir" 2>/dev/null || echo 0)
+                        if [[ "$mtime" -gt "$latest_time" ]]; then
+                            latest_time="$mtime"
+                            latest_dir="$dir"
+                        fi
+                    fi
+                done
             fi
         fi
     done
@@ -228,7 +280,18 @@ run_cuis() {
         
         download_cuis "$CUIS_VERSION" "."
         
-        if [[ ! -f "./Cuis.image" ]]; then
+        # Verify installation - check for Cuis*.image or CuisImage/*.image
+        local has_image=false
+        shopt -s nullglob
+        for img in Cuis*.image CuisImage/*.image; do
+            if [[ -f "$img" ]]; then
+                has_image=true
+                break
+            fi
+        done
+        shopt -u nullglob
+        
+        if ! $has_image; then
             die "Cuis installation failed - no image file found"
         fi
         
@@ -245,19 +308,26 @@ run_cuis() {
     case "$os_type" in
         macos)
             # Cuis provides platform-specific launch scripts
+            # Check in root directory first, then in CuisImage for Cuis7-6-main style
             if [[ -f "./RunCuisOnMac.sh" ]]; then
                 chmod +x ./RunCuisOnMac.sh 2>/dev/null || true
                 ./RunCuisOnMac.sh
-            elif [[ -f "./Cuis.app" ]]; then
-                open ./Cuis.app
+            elif [[ -f "./CuisImage/RunCuisOnMac.sh" ]]; then
+                chmod +x ./CuisImage/RunCuisOnMac.sh 2>/dev/null || true
+                ./CuisImage/RunCuisOnMac.sh
+            elif [[ -f "./CuisVM.app" ]]; then
+                open ./CuisVM.app
             else
-                die "Cannot find Cuis executable for macOS (RunCuisOnMac.sh or Cuis.app)"
+                die "Cannot find Cuis executable for macOS (RunCuisOnMac.sh)"
             fi
             ;;
         linux)
             if [[ -f "./RunCuisOnLinux.sh" ]]; then
                 chmod +x ./RunCuisOnLinux.sh 2>/dev/null || true
                 ./RunCuisOnLinux.sh
+            elif [[ -f "./CuisImage/RunCuisOnLinux.sh" ]]; then
+                chmod +x ./CuisImage/RunCuisOnLinux.sh 2>/dev/null || true
+                ./CuisImage/RunCuisOnLinux.sh
             else
                 die "Cannot find Cuis executable for Linux (RunCuisOnLinux.sh)"
             fi
@@ -265,6 +335,8 @@ run_cuis() {
         windows)
             if [[ -f "./RunCuisOnWindows.bat" ]]; then
                 ./RunCuisOnWindows.bat
+            elif [[ -f "./CuisImage/RunCuisOnWindows.bat" ]]; then
+                ./CuisImage/RunCuisOnWindows.bat
             else
                 die "Cannot find Cuis executable for Windows (RunCuisOnWindows.bat)"
             fi
