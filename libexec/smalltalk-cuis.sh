@@ -242,19 +242,33 @@ download_cuis() {
     cp -r "$extracted_dir"/* .
     rm -rf "$temp_dir"
 
-    if is_cuis_installed >/dev/null; then
+    # Check for launch scripts (Cuis provides RunCuisOnMac.sh, RunCuisOnLinux.sh, RunCuisOnWindows.bat)
+    local has_launcher=false
+    shopt -s nullglob
+    for f in RunCuisOn*.sh RunCuisOn*.bat; do
+        if [[ -f "$f" ]]; then
+            has_launcher=true
+            break
+        fi
+    done
+    shopt -u nullglob
+
+    if $has_launcher; then
         log_success "Cuis ${version} installed successfully"
+
 
         # Register files
         local files=()
-        for f in Cuis.image Cuis.changes Cuis*.sources Cuis.app RunCuisOnMac.sh RunCuisOnLinux.sh RunCuisOnWindows.bat; do
+        for f in CuisImage/*.image CuisImage/*.changes CuisImage/*.sources RunCuisOn*.sh RunCuisOn*.bat CuisVM.app; do
             if [[ -e "$f" ]]; then
                 files+=("$(pwd)/$f")
             fi
         done
         register_install "cuis" "$(pwd)" "${files[@]}"
     else
-        die "Cuis installation failed - image files not found after extraction"
+        log_error "Contents of install directory:"
+        ls -la .
+        die "Cuis installation failed - launch scripts not found after extraction"
     fi
 }
 
@@ -280,19 +294,19 @@ run_cuis() {
         
         download_cuis "$CUIS_VERSION" "."
         
-        # Verify installation - check for Cuis*.image or CuisImage/*.image
-        local has_image=false
+        # Verify installation - check for launch scripts
+        local has_launcher=false
         shopt -s nullglob
-        for img in Cuis*.image CuisImage/*.image; do
-            if [[ -f "$img" ]]; then
-                has_image=true
+        for f in RunCuisOn*.sh RunCuisOn*.bat; do
+            if [[ -f "$f" ]]; then
+                has_launcher=true
                 break
             fi
         done
         shopt -u nullglob
         
-        if ! $has_image; then
-            die "Cuis installation failed - no image file found"
+        if ! $has_launcher; then
+            die "Cuis installation failed - no launch scripts found"
         fi
         
         cuis_dir="$(pwd)"
