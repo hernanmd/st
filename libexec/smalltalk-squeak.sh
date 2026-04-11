@@ -124,11 +124,13 @@ is_squeak_installed() {
     local search_dirs=("." "$HOME/Squeak" "$HOME/squeak" "$HOME/.local/share/squeak")
 
     for dir in "${search_dirs[@]}"; do
+        # Check root directory for image files
         if [[ -f "${dir}/Squeak.image" ]] && [[ -f "${dir}/Squeak.changes" ]]; then
             echo "$dir"
             return 0
         fi
-        # Check for versioned image names
+        
+        # Check for versioned image names at root
         for img in "${dir}"/Squeak*.image; do
             if [[ -f "$img" ]]; then
                 local changes="${img%.image}.changes"
@@ -138,6 +140,24 @@ is_squeak_installed() {
                 fi
             fi
         done
+        
+        # Check inside .app bundle (macOS All-in-One format)
+        shopt -s nullglob
+        for app_dir in "${dir}"/*.app; do
+            if [[ -d "$app_dir" ]]; then
+                local resources="$app_dir/Contents/Resources"
+                if [[ -d "$resources" ]]; then
+                    for img in "$resources"/*.image; do
+                        if [[ -f "$img" ]]; then
+                            shopt -u nullglob
+                            echo "$dir"
+                            return 0
+                        fi
+                    done
+                fi
+            fi
+        done
+        shopt -u nullglob
     done
     return 1
 }
@@ -160,6 +180,7 @@ download_squeak() {
     fi
 
     ensure_install_dir "$install_dir"
+    mkdir -p "$install_dir"
     cd "$install_dir" || die "Cannot change to directory: $install_dir"
 
     local archive_name="Squeak-${version}.zip"
@@ -192,39 +213,113 @@ download_squeak() {
         return 1
     fi
 
-    # Find the extracted directory (All-in-One extracts to a subdirectory)
-    local extracted_dir
-    extracted_dir=$(find "$temp_dir" -maxdepth 1 -type d -name "Squeak*" 2>/dev/null | head -1)
-
-    if [[ -n "$extracted_dir" ]] && [[ -d "$extracted_dir" ]]; then
-        # Copy contents to install directory
-        cp -r "$extracted_dir"/* .
-    else
-        # Files might be at root of archive
-        cp -r "$temp_dir"/* . 2>/dev/null || true
-    fi
-
-    # Cleanup temp directory (it's tracked, but clean up now)
-    rm -rf "$temp_dir"
-
-    # Verify installation
+    # Find the extracted content
+    # All-in-One format: the .app bundle is directly in the extracted folder
     local found_image=false
-    for img in Squeak*.image; do
-        if [[ -f "$img" ]]; then
-            found_image=true
+    local extracted_app=""
+    
+    # Look for .app bundle in extracted directory (macOS All-in-One)
+    for app_dir in "$temp_dir"/*.app "$temp_dir"/Squeak*.app; do
+        if [[ -d "$app_dir" ]]; then
+            extracted_app="$app_dir"
             break
         fi
     done
+    
+    if [[ -n "$extracted_app" ]] && [[ -d "$extracted_app" ]]; then
+        log_debug "Found .app bundle: $extracted_app"
+        
+        # Copy the entire .app bundle to install directory
+        local app_name
+        app_name=$(basename "$extracted_app")
+        cp -r "$extracted_app" .
+        log_info "Installed: $app_name"
+        
+        # Check for image inside the .app/Contents/Resources/
+        local resources="$extracted_app/Contents/Resources"
+        if [[ -d "$resources" ]]; then
+            for img in "$resources"/*.image; do
+                if [[ -f "$img" ]]; then
+                    found_image=true
+                    log_debug "Found image: $(basename $img)"
+                    break
+                fi
+            done
+        fi
+    else
+        # Fallback: Look for image files or extracted directory at root
+        log_debug "No .app bundle found, looking for other formats..."
+        
+        # Try to find a Squeak directory in the extracted content
+        extracted_dir=$(find "$temp_dir" -maxdepth 1 -type d -name "Squeak*" 2>/dev/null | head -1)
+        
+        if [[ -n "$extracted_dir" ]] && [[ -d "$extracted_dir" ]]; then
+            # Copy contents to install directory
+            cp -r "$extracted_dir"/* . 2>/dev/null || true
+        else
+            # Files might be at root of archive
+            cp -r "$temp_dir"/* . 2>/dev/null || true
+        fi
+        
+        # Check for image files at root
+        for img in Squeak*.image *.image; do
+            if [[ -f "$img" ]]; then
+                found_image=true
+                break
+            fi
+        done
+    fi
+
+    # Cleanup temp directory
+    rm -rf "$temp_dir"
+
+    # Final verification: check inside installed .app bundles
+    if ! $found_image; then
+        for app_dir in *.app; do
+            if [[ -d "$app_dir" ]]; then
+                local resources="$app_dir/Contents/Resources"
+                if [[ -d "$resources" ]]; then
+                    for img in "$resources"/*.image; do
+                        if [[ -f "$img" ]]; then
+                            found_image=true
+                            log_debug "Verified image in: $app_dir/Contents/Resources/"
+                            break 2
+                        fi
+                    done
+                fi
+            fi
+        done
+    fi
+
+    # Also check for Squeak*.image pattern
+    if ! $found_image; then
+        for img in Squeak*.image; do
+            if [[ -f "$img" ]]; then
+                found_image=true
+                break
+            fi
+        done
+    fi
 
     if ! $found_image; then
-        die "Squeak installation failed - no image file found after extraction"
+        log_error "Squeak installation failed - no image file found after extraction"
+        log_error "Contents of install directory:"
+        ls -la .
+        die "Please check the extracted files manually"
     fi
 
     log_success "Squeak ${version} installed successfully"
 
     # Register files
     local files=()
-    for f in Squeak*.image Squeak*.changes Squeak*.sources Squeak*.app squeak; do
+    # Register the .app bundle(s)
+    for app in *.app; do
+        if [[ -d "$app" ]]; then
+            files+=("$(pwd)/$app")
+        fi
+    done
+    # Register any standalone image files
+    for f in Squeak*.image Squeak*.changes Squeak*.sources; do
         if [[ -e "$f" ]]; then
             files+=("$(pwd)/$f")
         fi
@@ -530,18 +625,37 @@ smalltalk_squeak_version() {
     cd "$squeak_dir" || return 1
 
     # Try to detect version from image file name
-    local image_name
-    for img in Squeak*.image; do
-        if [[ -f "$img" ]]; then
-            image_name="$img"
-            break
+    local image_name=""
+    
+    # First check inside .app bundle (All-in-One format)
+    for app_dir in *.app Squeak*.app; do
+        if [[ -d "$app_dir" ]]; then
+            local resources="$app_dir/Contents/Resources"
+            if [[ -d "$resources" ]]; then
+                for img in "$resources"/*.image; do
+                    if [[ -f "$img" ]]; then
+                        image_name=$(basename "$img")
+                        break 2
+                    fi
+                done
+            fi
         fi
     done
+    
+    # Fallback: check for image at root
+    if [[ -z "$image_name" ]]; then
+        for img in Squeak*.image *.image; do
+            if [[ -f "$img" ]]; then
+                image_name=$(basename "$img")
+                break
+            fi
+        done
+    fi
 
     if [[ -n "$image_name" ]]; then
-        # Extract version from image name (e.g., Squeak6.0-22148.image)
+        # Extract version from image name (e.g., Squeak5.3-19486.image, Squeak6.0-22148.image)
         local version
-        version=$(echo "$image_name" | grep -oE 'Squeak[0-9]+\.[0-9]+' | head -1)
+        version=$(echo "$image_name" | grep -oE 'Squeak[0-9]+(\.[0-9]+)?' | head -1)
         if [[ -n "$version" ]]; then
             echo "${version} (installed at $squeak_dir)"
         else
