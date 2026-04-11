@@ -354,12 +354,14 @@ download_squeak() {
     fi
 
     # Find the extracted content
-    # All-in-One format: the .app bundle is directly in the extracted folder
+    # All-in-One format creates: Squeak-<version>_YYYYMMDD_HHMMSS/Squeak...app/
+    # The .app bundle and its Resources are nested
     local found_image=false
     local extracted_app=""
     
-    # Look for .app bundle in extracted directory (macOS All-in-One)
-    for app_dir in "$temp_dir"/*.app "$temp_dir"/Squeak*.app; do
+    # Look for .app bundle - might be in nested directory
+    # Pattern: Squeak-<version>_YYYYMMDD_HHMMSS/Squeak*.app
+    for app_dir in "$temp_dir"/Squeak-*/Squeak*.app "$temp_dir"/Squeak-*/Squeak.app "$temp_dir"/*.app "$temp_dir"/Squeak*.app; do
         if [[ -d "$app_dir" ]]; then
             extracted_app="$app_dir"
             break
@@ -369,11 +371,13 @@ download_squeak() {
     if [[ -n "$extracted_app" ]] && [[ -d "$extracted_app" ]]; then
         log_debug "Found .app bundle: $extracted_app"
         
-        # Copy the entire .app bundle to install directory
-        local app_name
-        app_name=$(basename "$extracted_app")
-        cp -r "$extracted_app" .
-        log_info "Installed: $app_name"
+        # Copy the entire directory structure to install directory
+        local app_parent_dir
+        app_parent_dir=$(dirname "$extracted_app")
+        local dir_name
+        dir_name=$(basename "$app_parent_dir")
+        cp -r "$app_parent_dir" .
+        log_info "Installed: $dir_name"
         
         # Check for image inside the .app/Contents/Resources/
         local resources="$extracted_app/Contents/Resources"
@@ -431,12 +435,30 @@ download_squeak() {
         done
     fi
 
-    # Also check for Squeak*.image pattern
+    # Also check for Squeak*.image pattern and inside versioned directories
     if ! $found_image; then
         for img in Squeak*.image; do
             if [[ -f "$img" ]]; then
                 found_image=true
                 break
+            fi
+        done
+    fi
+
+    # Check inside versioned directories with .app bundles
+    if ! $found_image; then
+        for dir in Squeak-*; do
+            if [[ -d "$dir" ]]; then
+                for app in "$dir"/*.app; do
+                    if [[ -d "$app" ]] && [[ -d "$app/Contents/Resources" ]]; then
+                        for img in "$app/Contents/Resources"/*.image; do
+                            if [[ -f "$img" ]]; then
+                                found_image=true
+                                break 3
+                            fi
+                        done
+                    fi
+                done
             fi
         done
     fi
