@@ -174,7 +174,7 @@ smalltalk_gt_help() {
 Glamorous Toolkit Commands
 =========================
 
-Usage: smalltalk [-x] gt <command> [options]
+Usage: st [-x] gt <command> [options]
 
 Commands:
   install [-d dir]       Install Glamorous Toolkit to the specified directory
@@ -193,9 +193,9 @@ Options:
 Debug Mode:
   -x, --debug           Enable debug mode (set -x tracing)
                         Must be specified before implementation name
-                        Example: smalltalk -x gt install
+                        Example: st -x gt install
 
-Clap Commands (run as: smalltalk gt run <cmd>):
+Clap Commands (run as: st gt run <cmd>):
   metacello <spec>         Install Metacello baseline/configuration
   st <file.st>           Load and execute .st source file
   save [name]            Save the image
@@ -203,12 +203,12 @@ Clap Commands (run as: smalltalk gt run <cmd>):
   eval <code>             Evaluate Smalltalk code
 
 Examples:
-  smalltalk gt install           # Install GT to current directory
-  smalltalk gt install -d ~/gt  # Install GT to ~/gt
-  smalltalk -x gt install        # Install with debug output
-  smalltalk gt run              # Run GT
-  smalltalk gt run metacello 'BaselineOfPha...'
-  smalltalk gt run eval '1+2'
+  st gt install           # Install GT to current directory
+  st gt install -d ~/gt  # Install GT to ~/gt
+  st -x gt install        # Install with debug output
+  st gt run              # Run GT
+  st gt run metacello 'BaselineOfPha...'
+  st gt run eval '1+2'
 
 About Glamorous Toolkit:
   Glamorous Toolkit is a multi-language IDE developed in Pharo.
@@ -236,7 +236,7 @@ smalltalk_gt_install() {
                 ;;
             -*)
                 log_error "Unknown option: $1"
-                echo "Usage: smalltalk gt install [-d <dir>]"
+                echo "Usage: st gt install [-d <dir>]"
                 return 1
                 ;;
             *)
@@ -300,7 +300,7 @@ smalltalk_gt_run() {
             shift
             local spec="$*"
             if [[ -z "$spec" ]]; then
-                log_error "Usage: smalltalk gt run metacello <baseline-spec>"
+                log_error "Usage: st gt run metacello <baseline-spec>"
                 return 1
             fi
             if [[ -f "$gt_executable" ]]; then
@@ -313,7 +313,7 @@ smalltalk_gt_run() {
         st)
             local st_file="${1:-}"
             if [[ -z "$st_file" ]]; then
-                log_error "Usage: smalltalk gt run st <file.st>"
+                log_error "Usage: st gt run st <file.st>"
                 return 1
             fi
             if [[ -f "$gt_executable" ]]; then
@@ -348,7 +348,7 @@ smalltalk_gt_run() {
             shift
             local code="$*"
             if [[ -z "$code" ]]; then
-                log_error "Usage: smalltalk gt run eval <code>"
+                log_error "Usage: st gt run eval <code>"
                 return 1
             fi
             if [[ -f "$gt_executable" ]]; then
@@ -363,7 +363,7 @@ smalltalk_gt_run() {
             ;;
         *)
             log_error "Unknown command: $cmd"
-            echo "Run 'smalltalk gt help' for available commands"
+            echo "Run 'st gt help' for available commands"
             return 1
             ;;
     esac
@@ -374,7 +374,7 @@ smalltalk_gt_search() {
 
     if [[ -z "$search_term" ]]; then
         log_error "Please provide a search term"
-        echo "Usage: smalltalk gt search <term>"
+        echo "Usage: st gt search <term>"
         exit 1
     fi
 

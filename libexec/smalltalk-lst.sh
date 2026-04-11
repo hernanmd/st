@@ -157,7 +157,7 @@ download_lst_binary() {
 # Run LST
 run_lst() {
     local lst_path
-    lst_path=$(is_lst_installed) || die "LST is not installed. Run 'smalltalk lst install' first."
+    lst_path=$(is_lst_installed) || die "LST is not installed. Run 'st lst install' first."
 
     if [[ "$lst_path" == "system" ]]; then
         lst3r "$@"
@@ -179,7 +179,7 @@ smalltalk_lst_help() {
 Little Smalltalk v3 Commands
 ============================
 
-Usage: smalltalk [-x] lst <command>
+Usage: st [-x] lst <command>
 
 Commands:
   install [--build]   Install LST (use --build to compile from source)
@@ -198,14 +198,14 @@ Options:
 Debug Mode:
   -x, --debug         Enable debug mode (set -x tracing)
                       Must be specified before implementation name
-                      Example: smalltalk -x lst install
+                      Example: st -x lst install
 
 Examples:
-  smalltalk lst install           # Download prebuilt binary
-  smalltalk lst install --build   # Build from source
-  smalltalk -x lst install        # Install with debug output
-  smalltalk lst run               # Start REPL
-  smalltalk lst run script.lst3   # Run a .lst3 file
+  st lst install           # Download prebuilt binary
+  st lst install --build   # Build from source
+  st -x lst install        # Install with debug output
+  st lst run               # Start REPL
+  st lst run script.lst3   # Run a .lst3 file
 
 About Little Smalltalk v3:
   Little Smalltalk is a simplified Smalltalk dialect designed

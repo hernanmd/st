@@ -148,7 +148,7 @@ download_cuis() {
 # Run Cuis
 run_cuis() {
     local cuis_dir
-    cuis_dir=$(is_cuis_installed) || die "Cuis is not installed. Run 'smalltalk cuis install' first."
+    cuis_dir=$(is_cuis_installed) || die "Cuis is not installed. Run 'st cuis install' first."
 
     cd "$cuis_dir" || die "Cannot change to Cuis directory"
 
@@ -174,7 +174,7 @@ smalltalk_cuis_help() {
 Cuis Smalltalk Commands
 =======================
 
-Usage: smalltalk [-x] cuis <command> [options]
+Usage: st [-x] cuis <command> [options]
 
 Commands:
   install [ver] [-d dir]      Install Cuis (default: stable, options: stable, 7.0, 6.0)
@@ -193,16 +193,16 @@ Options:
 Debug Mode:
   -x, --debug               Enable debug mode (set -x tracing)
                             Must be specified before implementation name
-                            Example: smalltalk -x cuis install
+                            Example: st -x cuis install
 
 Examples:
-  smalltalk cuis install                    # Install latest stable Cuis
-  smalltalk cuis install 7.0               # Install Cuis 7.0
-  smalltalk cuis install -d ~/cuis         # Install to specific directory
-  smalltalk cuis install 7.0 -d ~/cuis70   # Install specific version to directory
-  smalltalk -x cuis install                # Install with debug output
-  smalltalk cuis run                       # Run Cuis
-  smalltalk cuis version                   # Show installed version
+  st cuis install                    # Install latest stable Cuis
+  st cuis install 7.0               # Install Cuis 7.0
+  st cuis install -d ~/cuis         # Install to specific directory
+  st cuis install 7.0 -d ~/cuis70   # Install specific version to directory
+  st -x cuis install                # Install with debug output
+  st cuis run                       # Run Cuis
+  st cuis version                   # Show installed version
 
 Available Versions:
   stable  - Latest stable release (Cuis 7.6)
@@ -234,7 +234,7 @@ smalltalk_cuis_install() {
                 ;;
             -*)
                 log_error "Unknown option: $1"
-                echo "Usage: smalltalk cuis install [version] [-d <dir>]"
+                echo "Usage: st cuis install [version] [-d <dir>]"
                 return 1
                 ;;
             *)
@@ -254,7 +254,7 @@ smalltalk_cuis_install() {
             ;;
         *)
             log_error "Unknown Cuis version: $version"
-            echo "Run 'smalltalk cuis install help' to see available versions."
+            echo "Run 'st cuis install help' to see available versions."
             return 1
             ;;
     esac
@@ -290,7 +290,7 @@ smalltalk_cuis_search() {
 
     if [[ -z "$search_term" ]]; then
         log_error "Please provide a search term"
-        echo "Usage: smalltalk cuis search <term>"
+        echo "Usage: st cuis search <term>"
         exit 1
     fi
 

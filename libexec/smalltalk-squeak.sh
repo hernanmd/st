@@ -230,7 +230,7 @@ download_squeak() {
 # Run Squeak
 run_squeak() {
     local squeak_dir
-    squeak_dir=$(is_squeak_installed) || die "Squeak is not installed. Run 'smalltalk squeak install' first."
+    squeak_dir=$(is_squeak_installed) || die "Squeak is not installed. Run 'st squeak install' first."
 
     cd "$squeak_dir" || die "Cannot change to Squeak directory"
 
@@ -283,7 +283,7 @@ smalltalk_squeak_help() {
 Squeak Smalltalk Commands
 ========================
 
-Usage: smalltalk [-x] squeak <command> [options]
+Usage: st [-x] squeak <command> [options]
 
 Commands:
   install [ver] [-d dir]   Install Squeak (options: stable, 6.0, 5.4, 5.3)
@@ -302,16 +302,16 @@ Options:
 Debug Mode:
   -x, --debug               Enable debug mode (set -x tracing)
                             Must be specified before implementation name
-                            Example: smalltalk -x squeak install
+                            Example: st -x squeak install
 
 Examples:
-  smalltalk squeak install                    # Install latest stable Squeak
-  smalltalk squeak install 5.4              # Install Squeak 5.4
-  smalltalk squeak install -d ~/squeak      # Install to specific directory
-  smalltalk squeak install 5.3 -d ~/squeak53  # Install specific version
-  smalltalk -x squeak install               # Install with debug output
-  smalltalk squeak run                       # Run Squeak
-  smalltalk squeak version                   # Show installed version
+  st squeak install                    # Install latest stable Squeak
+  st squeak install 5.4              # Install Squeak 5.4
+  st squeak install -d ~/squeak      # Install to specific directory
+  st squeak install 5.3 -d ~/squeak53  # Install specific version
+  st -x squeak install               # Install with debug output
+  st squeak run                       # Run Squeak
+  st squeak version                   # Show installed version
 
 Available Versions:
   stable  - Latest stable release (Squeak 6.0)
@@ -349,7 +349,7 @@ smalltalk_squeak_install() {
                 ;;
             -*)
                 log_error "Unknown option: $1"
-                echo "Usage: smalltalk squeak install [version] [-d <dir>]"
+                echo "Usage: st squeak install [version] [-d <dir>]"
                 return 1
                 ;;
             *)
@@ -369,7 +369,7 @@ smalltalk_squeak_install() {
             ;;
         *)
             log_error "Unknown Squeak version: $version"
-            echo "Run 'smalltalk squeak install help' to see available versions."
+            echo "Run 'st squeak install help' to see available versions."
             return 1
             ;;
     esac
@@ -411,7 +411,7 @@ smalltalk_squeak_run() {
             ;;
         *)
             log_error "Squeak does not support command-line execution of scripts"
-            log_info "Run 'smalltalk squeak run' to launch the Squeak UI"
+            log_info "Run 'st squeak run' to launch the Squeak UI"
             return 1
             ;;
     esac
@@ -422,7 +422,7 @@ smalltalk_squeak_search() {
 
     if [[ -z "$search_term" ]]; then
         log_error "Please provide a search term"
-        echo "Usage: smalltalk squeak search <term>"
+        echo "Usage: st squeak search <term>"
         exit 1
     fi
 

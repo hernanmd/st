@@ -128,7 +128,7 @@ install_gnustack_package() {
                 log_info "Installing GNU Smalltalk via pacman..."
                 sudo pacman -S --noconfirm smalltalk
             else
-                die "No supported package manager found. Install from source with 'smalltalk gnu install --source'"
+                die "No supported package manager found. Install from source with 'st gnu install --source'"
             fi
             ;;
         *)
@@ -140,7 +140,7 @@ install_gnustack_package() {
 # Run GNU Smalltalk
 run_gnustack() {
     if ! is_gnustack_installed; then
-        die "GNU Smalltalk is not installed. Run 'smalltalk gnu install' first."
+        die "GNU Smalltalk is not installed. Run 'st gnu install' first."
     fi
 
     # Run gst with any additional arguments
@@ -160,7 +160,7 @@ smalltalk_gnu_help() {
 GNU Smalltalk Commands
 =====================
 
-Usage: smalltalk [-x] gnu <command>
+Usage: st [-x] gnu <command>
 
 Commands:
   install [--source]   Install GNU Smalltalk (use --source for building from source)
@@ -179,15 +179,15 @@ Options:
 Debug Mode:
   -x, --debug          Enable debug mode (set -x tracing)
                        Must be specified before implementation name
-                       Example: smalltalk -x gnu install
+                       Example: st -x gnu install
 
 Examples:
-  smalltalk gnu install            # Install via package manager
-  smalltalk gnu install --source   # Build from source
-  smalltalk -x gnu install         # Install with debug output
-  smalltalk gnu run                # Start REPL
-  smalltalk gnu run script.st      # Run a .st file
-  smalltalk gnu run -i script.st   # Run script and exit
+  st gnu install            # Install via package manager
+  st gnu install --source   # Build from source
+  st -x gnu install         # Install with debug output
+  st gnu run                # Start REPL
+  st gnu run script.st      # Run a .st file
+  st gnu run -i script.st   # Run script and exit
 
 About GNU Smalltalk:
   GNU Smalltalk is an implementation that follows the Smalltalk-80 standard
