@@ -195,7 +195,7 @@ download_cuis() {
 
         # Register files
         local files=()
-        for f in Cuis.image Cuis.changes Cuis*.sources Cuis.app run_cuis.sh; do
+        for f in Cuis.image Cuis.changes Cuis*.sources Cuis.app RunCuisOnMac.sh RunCuisOnLinux.sh RunCuisOnWindows.bat; do
             if [[ -e "$f" ]]; then
                 files+=("$(pwd)/$f")
             fi
@@ -244,24 +244,29 @@ run_cuis() {
     
     case "$os_type" in
         macos)
-            if [[ -f "./Cuis.app" ]]; then
+            # Cuis provides platform-specific launch scripts
+            if [[ -f "./RunCuisOnMac.sh" ]]; then
+                chmod +x ./RunCuisOnMac.sh 2>/dev/null || true
+                ./RunCuisOnMac.sh
+            elif [[ -f "./Cuis.app" ]]; then
                 open ./Cuis.app
-            elif [[ -f "./run_cuis.sh" ]]; then
-                chmod +x ./run_cuis.sh 2>/dev/null || true
-                ./run_cuis.sh
             else
-                die "Cannot find Cuis executable"
+                die "Cannot find Cuis executable for macOS (RunCuisOnMac.sh or Cuis.app)"
             fi
             ;;
         linux)
-            if [[ -f "./run_cuis.sh" ]]; then
-                chmod +x ./run_cuis.sh 2>/dev/null || true
-                ./run_cuis.sh
-            elif [[ -f "./cuis" ]]; then
-                chmod +x ./cuis 2>/dev/null || true
-                ./cuis
+            if [[ -f "./RunCuisOnLinux.sh" ]]; then
+                chmod +x ./RunCuisOnLinux.sh 2>/dev/null || true
+                ./RunCuisOnLinux.sh
             else
-                die "Cannot find Cuis executable"
+                die "Cannot find Cuis executable for Linux (RunCuisOnLinux.sh)"
+            fi
+            ;;
+        windows)
+            if [[ -f "./RunCuisOnWindows.bat" ]]; then
+                ./RunCuisOnWindows.bat
+            else
+                die "Cannot find Cuis executable for Windows (RunCuisOnWindows.bat)"
             fi
             ;;
         *)
