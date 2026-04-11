@@ -354,14 +354,13 @@ download_squeak() {
     fi
 
     # Find the extracted content
-    # All-in-One format creates: Squeak-<version>_YYYYMMDD_HHMMSS/Squeak...app/
-    # The .app bundle and its Resources are nested
+    # All-in-One format: the .app bundle is directly at root of extracted content
+    # e.g., /tmp/squeak.XXXX/Squeak5.3-19431-64bit-All-in-One.app/
     local found_image=false
     local extracted_app=""
     
-    # Look for .app bundle - might be in nested directory
-    # Pattern: Squeak-<version>_YYYYMMDD_HHMMSS/Squeak*.app
-    for app_dir in "$temp_dir"/Squeak-*/Squeak*.app "$temp_dir"/Squeak-*/Squeak.app "$temp_dir"/*.app "$temp_dir"/Squeak*.app; do
+    # Look for .app bundle - directly at root of temp_dir
+    for app_dir in "$temp_dir"/*.app "$temp_dir"/Squeak*.app "$temp_dir"/Squeak.app; do
         if [[ -d "$app_dir" ]]; then
             extracted_app="$app_dir"
             break
@@ -371,13 +370,11 @@ download_squeak() {
     if [[ -n "$extracted_app" ]] && [[ -d "$extracted_app" ]]; then
         log_debug "Found .app bundle: $extracted_app"
         
-        # Copy the entire directory structure to install directory
-        local app_parent_dir
-        app_parent_dir=$(dirname "$extracted_app")
-        local dir_name
-        dir_name=$(basename "$app_parent_dir")
-        cp -r "$app_parent_dir" .
-        log_info "Installed: $dir_name"
+        # Copy the .app bundle to install directory
+        local app_name
+        app_name=$(basename "$extracted_app")
+        cp -r "$extracted_app" .
+        log_info "Installed: $app_name"
         
         # Check for image inside the .app/Contents/Resources/
         local resources="$extracted_app/Contents/Resources"
@@ -391,19 +388,11 @@ download_squeak() {
             done
         fi
     else
-        # Fallback: Look for image files or extracted directory at root
+        # Fallback: Look for image files at root (non-All-in-One format)
         log_debug "No .app bundle found, looking for other formats..."
         
-        # Try to find a Squeak directory in the extracted content
-        extracted_dir=$(find "$temp_dir" -maxdepth 1 -type d -name "Squeak*" 2>/dev/null | head -1)
-        
-        if [[ -n "$extracted_dir" ]] && [[ -d "$extracted_dir" ]]; then
-            # Copy contents to install directory
-            cp -r "$extracted_dir"/* . 2>/dev/null || true
-        else
-            # Files might be at root of archive
-            cp -r "$temp_dir"/* . 2>/dev/null || true
-        fi
+        # Copy all extracted content
+        cp -r "$temp_dir"/* . 2>/dev/null || true
         
         # Check for image files at root
         for img in Squeak*.image *.image; do
