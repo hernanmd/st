@@ -11,7 +11,7 @@ source "${BASH_SOURCE%/*}/smalltalk-common.sh"
 ## Pharo Configuration
 #################################
 
-PHARO_VERSION="${PHARO_VERSION:-13}"
+PHARO_VERSION="${PHARO_VERSION:-130}"
 PHARO_URL_BASE="https://get.pharo.org"
 PHARO_CACHE_DIR="${CACHE_DIR}/pharo"
 PHARO_IMAGE_NAME="${PHARO_IMAGE_NAME:-Pharo.image}"

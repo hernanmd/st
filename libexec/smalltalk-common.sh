@@ -355,6 +355,10 @@ log_debug() {
     fi
 }
 
+log_warn() {
+    printf "[WARN] %s\n" "$*"
+}
+
 # Print error and exit
 die() {
     log_error "$*"
