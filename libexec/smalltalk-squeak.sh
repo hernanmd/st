@@ -15,144 +15,108 @@ SQUEAK_VERSION="${SQUEAK_VERSION:-stable}"
 SQUEAK_URL_BASE="https://files.squeak.org"
 SQUEAK_CACHE_DIR="${CACHE_DIR}/squeak"
 
-# Known Squeak versions and their download URLs (using files.squeak.org)
-# URL pattern: files.squeak.org/<version>/Squeak<version>-<build>-64bit/Squeak<version>-<build>-64bit-<platform>.<ext>
-declare -A SQUEAK_DOWNLOAD_URLS=(
-    # Squeak 6.0 (stable)
-    ["6.0-macos-x64"]="https://files.squeak.org/6.0/Squeak6.0-22148-64bit/Squeak6.0-22148-64bit-202312181441-macOS-x64.dmg"
-    ["6.0-macos-arm64"]="https://files.squeak.org/6.0/Squeak6.0-22148-64bit/Squeak6.0-22148-64bit-202312181441-macOS-ARMv8.dmg"
-    ["6.0-linux-x64"]="https://files.squeak.org/6.0/Squeak6.0-22148-64bit/Squeak6.0-22148-64bit-202312181441-Linux-x64.tar.gz"
-    ["6.0-linux-arm64"]="https://files.squeak.org/6.0/Squeak6.0-22148-64bit/Squeak6.0-22148-64bit-202312181441-Linux-ARMv8.tar.gz"
-    ["6.0-windows"]="https://files.squeak.org/6.0/Squeak6.0-22148-64bit/Squeak6.0-22148-64bit-202312181441-Windows-x64.zip"
-    # Squeak 6.0 All-in-One (cross-platform zip with VM included)
-    ["6.0-allinone"]="https://files.squeak.org/6.0/Squeak6.0-22148-64bit/Squeak6.0-22148-64bit-All-in-One.zip"
-    # Squeak 5.4 (older)
-    ["5.4"]="https://files.squeak.org/5.4/Squeak5.4-23647-64bit/Squeak5.4-23647-64bit.zip"
-    # Squeak 5.3 (current_stable)
-    ["5.3"]="https://files.squeak.org/5.3/Squeak5.3-19486-64bit/Squeak5.3-19486-64bit.zip"
-)
+# Use All-in-One ZIP for all platforms (includes VM and is cross-platform)
+# The All-in-One format is preferred because it works on all platforms
 
 #################################
 ## Squeak Helper Functions
 #################################
 
-# Get available Squeak versions by scraping the website
-get_squeak_versions() {
-    local cache_file="${SQUEAK_CACHE_DIR}/squeak-versions.json"
-
+# Get the current stable version from files.squeak.org/current_stable/
+get_current_stable_version() {
+    local cache_file="${SQUEAK_CACHE_DIR}/current_stable.txt"
     ensure_cache_dir
     mkdir -p "${SQUEAK_CACHE_DIR}"
-
-    # Try to fetch from cache first if recent
-    if [[ -f "$cache_file" ]] && [[ $(find "$cache_file" -mtime -1 2>/dev/null) ]]; then
-        cat "$cache_file"
-        return
-    fi
-
-    # Try to scrape the download page
-    local download_page="${SQUEAK_CACHE_DIR}/squeak-downloads.html"
-    if download_file "https://squeak.org/downloads/" "$download_page" 2>/dev/null; then
-        # Extract version numbers and download URLs from the page
-        # Look for patterns like "Squeak-6.0" or "Squeak 6.0"
-        grep -oP 'Squeak[- ]?[0-9]+\.[0-9]+' "$download_page" 2>/dev/null | \
-            sort -uV | \
-            head -10 > "${SQUEAK_CACHE_DIR}/versions-temp.txt"
-
-        # Return known stable versions if scraping fails
-        if [[ ! -s "${SQUEAK_CACHE_DIR}/versions-temp.txt" ]]; then
-            echo "6.0" > "${SQUEAK_CACHE_DIR}/versions-temp.txt"
-            echo "5.4" >> "${SQUEAK_CACHE_DIR}/versions-temp.txt"
-            echo "5.3" >> "${SQUEAK_CACHE_DIR}/versions-temp.txt"
+    
+    # Check cache (valid for 1 day)
+    if [[ -f "$cache_file" ]]; then
+        local cache_age
+        if [[ "$(uname)" == "Darwin" ]]; then
+            cache_age=$(( $(date +%s) - $(stat -f %m "$cache_file" 2>/dev/null || echo 0) ))
+        else
+            cache_age=$(( $(date +%s) - $(stat -c %Y "$cache_file" 2>/dev/null || echo 0) ))
         fi
-
-        cat "${SQUEAK_CACHE_DIR}/versions-temp.txt"
-    else
-        # Fallback to known versions
-        echo "6.0"
-        echo "5.4"
-        echo "5.3"
+        if [[ $cache_age -lt 86400 ]]; then  # 24 hours
+            cat "$cache_file"
+            return
+        fi
     fi
+    
+    # Fetch the current_stable directory listing
+    log_debug "Fetching current_stable version from files.squeak.org..."
+    local listing
+    listing=$(curl -fsSL "${SQUEAK_URL_BASE}/current_stable/" 2>/dev/null | grep -oE 'Squeak[0-9]+\.[0-9]+-[0-9]+-64bit' | head -1) || true
+    
+    if [[ -z "$listing" ]]; then
+        # Fallback to known version
+        log_warn "Could not detect current_stable, using fallback"
+        listing="Squeak6.1-22165-64bit"
+    fi
+    
+    # Cache the result
+    echo "$listing" > "$cache_file"
+    echo "$listing"
+}
+
+# Get available Squeak versions
+get_squeak_versions() {
+    log_info "Available Squeak versions:"
+    echo "  stable - Latest from files.squeak.org/current_stable (recommended)"
+    echo "  6.1    - Squeak 6.1"
+    echo "  6.0    - Squeak 6.0"
+    echo "  5.3    - Squeak 5.3"
 }
 
 # List available Squeak versions
 list_squeak_versions() {
-    log_info "Available Squeak versions:"
-    echo "  stable - Latest stable release (Squeak 6.0)"
-    echo "  6.0    - Squeak 6.0"
-    echo "  5.4    - Squeak 5.4"
-    echo "  5.3    - Squeak 5.3"
+    get_squeak_versions
 }
 
 # Get Squeak download URL for a specific version
+# Prioritizes All-in-One ZIP format for consistency across platforms
 get_squeak_url() {
     local version="${1:-$SQUEAK_VERSION}"
-    local os_type
-    local arch
 
-    os_type=$(get_os)
-    arch=$(get_arch)
+    log_debug "Getting Squeak URL for version=$version"
 
-    local url_key
-
-    # Normalize version
+    # For stable/latest, use current_stable directory
     case "$version" in
         stable|latest)
-            version="6.0"
+            # Get current stable version dynamically
+            local current_stable
+            current_stable=$(get_current_stable_version)
+            
+            # Use All-in-One ZIP for cross-platform compatibility
+            echo "${SQUEAK_URL_BASE}/current_stable/${current_stable}/${current_stable}-All-in-One.zip"
+            return
             ;;
     esac
 
-    # Map OS and architecture to URL key
-    case "$os_type" in
-        macos)
-            case "$arch" in
-                arm64)
-                    url_key="${version}-macos-arm64"
-                    ;;
-                *)
-                    url_key="${version}-macos-x64"
-                    ;;
-            esac
+    # For specific versions, construct URL using All-in-One format
+    # All-in-One ZIP works on all platforms and includes VM
+    local version_dir
+    local squeak_build
+    
+    case "$version" in
+        6.1)
+            version_dir="6.1"
+            squeak_build="Squeak6.1alpha-22148-64bit"
             ;;
-        linux)
-            case "$arch" in
-                arm64)
-                    url_key="${version}-linux-arm64"
-                    ;;
-                *)
-                    url_key="${version}-linux-x64"
-                    ;;
-            esac
+        6.0)
+            version_dir="6.0"
+            squeak_build="Squeak6.0-22148-64bit"
             ;;
-        windows)
-            url_key="${version}-windows"
+        5.3)
+            version_dir="5.3"
+            squeak_build="Squeak5.3-19486-64bit"
             ;;
         *)
-            die "Unsupported OS: $os_type"
+            die "Unsupported Squeak version: $version. Use stable, 6.1, 6.0, or 5.3"
             ;;
     esac
 
-    # Look up URL from known URLs
-    local url
-    case "$url_key" in
-        6.0-macos-x64) url="${SQUEAK_DOWNLOAD_URLS[6.0-macos-x64]}" ;;
-        6.0-macos-arm64) url="${SQUEAK_DOWNLOAD_URLS[6.0-macos-arm64]}" ;;
-        6.0-linux-x64) url="${SQUEAK_DOWNLOAD_URLS[6.0-linux-x64]}" ;;
-        6.0-linux-arm64) url="${SQUEAK_DOWNLOAD_URLS[6.0-linux-arm64]}" ;;
-        6.0-windows) url="${SQUEAK_DOWNLOAD_URLS[6.0-windows]}" ;;
-        5.4*)
-            # Fall back to all-in-one for older versions
-            url="${SQUEAK_DOWNLOAD_URLS[5.4]}"
-            ;;
-        5.3*)
-            # Fall back to all-in-one for older versions
-            url="${SQUEAK_DOWNLOAD_URLS[5.3]}"
-            ;;
-        *)
-            die "Unsupported Squeak version $version for $os_type-$arch. Try using 'stable' for Squeak 6.0"
-            ;;
-    esac
-
-    echo "$url"
+    # Use All-in-One ZIP for all platforms (includes VM, cross-platform)
+    echo "${SQUEAK_URL_BASE}/${version_dir}/${squeak_build}/${squeak_build}-All-in-One.zip"
 }
 
 # Check if Squeak is installed
@@ -164,10 +128,16 @@ is_squeak_installed() {
             echo "$dir"
             return 0
         fi
-        if [[ -d "${dir}/Squeak.app" ]] || [[ -d "${dir}/Squeak6.0.app" ]]; then
-            echo "$dir"
-            return 0
-        fi
+        # Check for versioned image names
+        for img in "${dir}"/Squeak*.image; do
+            if [[ -f "$img" ]]; then
+                local changes="${img%.image}.changes"
+                if [[ -f "$changes" ]]; then
+                    echo "$dir"
+                    return 0
+                fi
+            fi
+        done
     done
     return 1
 }
@@ -184,53 +154,88 @@ download_squeak() {
 
     log_debug "Download URL: $download_url"
 
+    # Validate URL
+    if ! validate_url "$download_url"; then
+        die "Invalid download URL: $download_url"
+    fi
+
     ensure_install_dir "$install_dir"
     cd "$install_dir" || die "Cannot change to directory: $install_dir"
 
     local archive_name="Squeak-${version}.zip"
     local temp_dir
-    temp_dir=$(mktemp -d)
+    temp_dir=$(make_temp_dir squeak)
 
+    log_info "Downloading from: $download_url"
+    
     if ! download_file "$download_url" "${temp_dir}/${archive_name}"; then
         log_error "Failed to download Squeak ${version}"
+        log_error "The version may not be available, or the URL has changed."
+        log_error "Try a different version or check https://files.squeak.org/"
         rm -rf "$temp_dir"
         return 1
     fi
 
-    # Extract
-    extract_archive "${temp_dir}/${archive_name}" "$temp_dir"
-
-    # Find and move extracted contents
-    local extracted_dir
-    extracted_dir=$(find "$temp_dir" -maxdepth 1 -type d \( -name "Squeak*" -o -name "squeak*" \) | head -1)
-
-    if [[ -n "$extracted_dir" && -d "$extracted_dir" ]]; then
-        cp -r "$extracted_dir"/* .
-        cp -r "$extracted_dir"/.* . 2>/dev/null || true
+    # Verify download
+    if [[ ! -f "${temp_dir}/${archive_name}" ]]; then
+        log_error "Download file not found"
+        rm -rf "$temp_dir"
+        return 1
     fi
 
+    log_info "Extracting Squeak..."
+    
+    # Extract the ZIP file
+    if ! extract_archive "${temp_dir}/${archive_name}" "$temp_dir"; then
+        log_error "Failed to extract archive"
+        rm -rf "$temp_dir"
+        return 1
+    fi
+
+    # Find the extracted directory (All-in-One extracts to a subdirectory)
+    local extracted_dir
+    extracted_dir=$(find "$temp_dir" -maxdepth 1 -type d -name "Squeak*" 2>/dev/null | head -1)
+
+    if [[ -n "$extracted_dir" ]] && [[ -d "$extracted_dir" ]]; then
+        # Copy contents to install directory
+        cp -r "$extracted_dir"/* .
+    else
+        # Files might be at root of archive
+        cp -r "$temp_dir"/* . 2>/dev/null || true
+    fi
+
+    # Cleanup temp directory (it's tracked, but clean up now)
     rm -rf "$temp_dir"
 
-    if is_squeak_installed >/dev/null; then
-        log_success "Squeak ${version} installed successfully"
+    # Verify installation
+    local found_image=false
+    for img in Squeak*.image; do
+        if [[ -f "$img" ]]; then
+            found_image=true
+            break
+        fi
+    done
 
-        # Register files
-        local files=()
-        for f in Squeak.image Squeak.changes Squeak*.sources Squeak*.app squeak; do
-            if [[ -e "$f" ]]; then
-                files+=("$(pwd)/$f")
-            fi
-        done
-        register_install "squeak" "$(pwd)" "${files[@]}"
-    else
-        die "Squeak installation failed - image files not found after extraction"
+    if ! $found_image; then
+        die "Squeak installation failed - no image file found after extraction"
     fi
+
+    log_success "Squeak ${version} installed successfully"
+
+    # Register files
+    local files=()
+    for f in Squeak*.image Squeak*.changes Squeak*.sources Squeak*.app squeak; do
+        if [[ -e "$f" ]]; then
+            files+=("$(pwd)/$f")
+        fi
+    done
+    register_install "squeak" "$(pwd)" "${files[@]}"
 }
 
 # Run Squeak
 run_squeak() {
     local squeak_dir
-    squeak_dir=$(is_squeak_installed) || die "Squeak is not installed. Run 'st squeak install' first."
+    squeak_dir=$(is_squeak_installed) || die "Squeak is not installed. Run 'smalltalk squeak install' first."
 
     cd "$squeak_dir" || die "Cannot change to Squeak directory"
 
@@ -239,34 +244,52 @@ run_squeak() {
 
     case "$os_type" in
         macos)
-            # Find .app bundle
+            # Find .app bundle (works for All-in-One)
             local app_path
             app_path=$(find . -name "*.app" -type d 2>/dev/null | head -1)
             if [[ -n "$app_path" ]]; then
                 open "$app_path"
             elif [[ -f "./Squeak.app" ]]; then
                 open ./Squeak.app
-            elif [[ -f "./Squeak6.0.app" ]]; then
-                open ./Squeak6.0.app
             else
-                die "Squeak.app not found"
+                # Look for any .app
+                local apps=(*.app)
+                if [[ ${#apps[@]} -gt 0 ]] && [[ -f "${apps[0]}" ]]; then
+                    open "${apps[0]}"
+                else
+                    die "Squeak.app not found"
+                fi
             fi
             ;;
         linux)
+            # Look for the Squeak VM executable
             local vm_path
             vm_path=$(find . -name "squeak" -o -name "squeakvm" 2>/dev/null | head -1 || true)
-            if [[ -n "$vm_path" ]]; then
-                chmod +x "$vm_path"
-                "$vm_path" Squeak.image
-            elif [[ -f "./Squeak.image" ]]; then
-                squeak Squeak.image || die "Failed to run Squeak"
+            
+            local image_name
+            image_name=$(ls Squeak*.image 2>/dev/null | head -1)
+            
+            if [[ -n "$vm_path" ]] && [[ -n "$image_name" ]]; then
+                chmod +x "$vm_path" 2>/dev/null || true
+                "$vm_path" "$image_name"
+            elif [[ -n "$image_name" ]]; then
+                # Try system squeak
+                if command -v squeak &>/dev/null; then
+                    squeak "$image_name"
+                else
+                    die "Cannot find Squeak VM. Install system Squeak or check the All-in-One bundle."
+                fi
             else
-                die "Cannot find Squeak VM or image"
+                die "Cannot find Squeak image"
             fi
             ;;
         windows)
-            if [[ -f "./Squeak.exe" ]]; then
-                ./Squeak.exe
+            # Look for .exe file
+            local exe_path
+            exe_path=$(find . -name "*.exe" -type f 2>/dev/null | head -1)
+            if [[ -n "$exe_path" ]]; then
+                chmod +x "$exe_path" 2>/dev/null || true
+                "$exe_path"
             else
                 die "Squeak.exe not found"
             fi
@@ -281,12 +304,12 @@ run_squeak() {
 smalltalk_squeak_help() {
     cat << 'EOF'
 Squeak Smalltalk Commands
-========================
+=========================
 
-Usage: st [-x] squeak <command> [options]
+Usage: smalltalk [-x] squeak <command> [options]
 
 Commands:
-  install [ver] [-d dir]   Install Squeak (options: stable, 6.0, 5.4, 5.3)
+  install [ver] [-d dir]   Install Squeak (options: stable, 6.1, 6.0, 5.3)
   run                       Run Squeak
   search <term>             Search for packages
   list                      List available packages
@@ -302,27 +325,31 @@ Options:
 Debug Mode:
   -x, --debug               Enable debug mode (set -x tracing)
                             Must be specified before implementation name
-                            Example: st -x squeak install
+                            Example: smalltalk -x squeak install
+
+Download Notes:
+  - All platforms download the "All-in-One" ZIP which includes the VM
+  - This ensures consistent behavior across macOS, Linux, and Windows
+  - The "stable" version is detected from files.squeak.org/current_stable/
 
 Examples:
-  st squeak install                    # Install latest stable Squeak
-  st squeak install 5.4              # Install Squeak 5.4
-  st squeak install -d ~/squeak      # Install to specific directory
-  st squeak install 5.3 -d ~/squeak53  # Install specific version
-  st -x squeak install               # Install with debug output
-  st squeak run                       # Run Squeak
-  st squeak version                   # Show installed version
+  smalltalk squeak install                    # Install latest stable Squeak
+  smalltalk squeak install 6.0                # Install Squeak 6.0
+  smalltalk squeak install -d ~/squeak        # Install to specific directory
+  smalltalk -x squeak install                 # Install with debug output
+  smalltalk squeak run                        # Run Squeak
+  smalltalk squeak version                    # Show installed version
 
 Available Versions:
-  stable  - Latest stable release (Squeak 6.0)
+  stable  - Latest stable (detected from files.squeak.org/current_stable/)
+  6.1     - Squeak 6.1
   6.0     - Squeak 6.0
-  5.4     - Squeak 5.4
   5.3     - Squeak 5.3
 
 Notes:
-  - Squeak has limited command-line interface compared to Pharo/GT
-  - Squeak uses Monticello for package management
-  - Package listings use GitHub topics
+  - Squeak uses All-in-One zip format with bundled VM
+  - Works on macOS (Intel and Apple Silicon), Linux, and Windows
+  - Package management via Monticello (search runs GitHub queries)
 
 About Squeak:
   Squeak is a modern, open-source Smalltalk environment.
@@ -349,7 +376,7 @@ smalltalk_squeak_install() {
                 ;;
             -*)
                 log_error "Unknown option: $1"
-                echo "Usage: st squeak install [version] [-d <dir>]"
+                echo "Usage: smalltalk squeak install [version] [-d <dir>]"
                 return 1
                 ;;
             *)
@@ -361,7 +388,7 @@ smalltalk_squeak_install() {
 
     # Validate version
     case "$version" in
-        stable|latest|6.0|5.4|5.3)
+        stable|latest|6.1|6.0|5.3)
             ;;
         help)
             list_squeak_versions
@@ -369,18 +396,10 @@ smalltalk_squeak_install() {
             ;;
         *)
             log_error "Unknown Squeak version: $version"
-            echo "Run 'st squeak install help' to see available versions."
+            echo "Run 'smalltalk squeak install help' to see available versions."
             return 1
             ;;
     esac
-
-    # If no destination directory specified, create timestamped subdirectory
-    if [[ "$install_dir" == "." ]]; then
-        local timestamp
-        timestamp=$(date +%Y%m%d_%H%M%S)
-        install_dir="Squeak-${version}_${timestamp}"
-        log_info "No destination specified. Creating directory: $install_dir"
-    fi
 
     # Check for existing Smalltalk installation
     if [[ -d "$install_dir" ]]; then
@@ -390,6 +409,15 @@ smalltalk_squeak_install() {
             log_error "Directory $install_dir already contains a $existing installation"
             return 1
         fi
+    fi
+
+    # If no destination directory specified, create timestamped subdirectory
+    if [[ "$install_dir" == "." ]]; then
+        local timestamp
+        timestamp=$(date +%Y%m%d_%H%M%S)
+        install_dir="Squeak-${version}_${timestamp}"
+        log_info "No destination specified. Creating directory: $install_dir"
+        mkdir -p "$install_dir"
     fi
 
     download_squeak "$version" "$install_dir"
@@ -404,14 +432,15 @@ smalltalk_squeak_run() {
         return
     fi
 
-    # Squeak has different command line interface than Pharo
+    # Squeak has limited command-line interface
     case "$cmd" in
         help|--help|-h)
             smalltalk_squeak_help
             ;;
         *)
             log_error "Squeak does not support command-line execution of scripts"
-            log_info "Run 'st squeak run' to launch the Squeak UI"
+            log_info "Run 'smalltalk squeak run' to launch the Squeak UI"
+            log_info "For script execution, use the Squeak UI or Pharo/GNU Smalltalk"
             return 1
             ;;
     esac
@@ -422,8 +451,8 @@ smalltalk_squeak_search() {
 
     if [[ -z "$search_term" ]]; then
         log_error "Please provide a search term"
-        echo "Usage: st squeak search <term>"
-        exit 1
+        echo "Usage: smalltalk squeak search <term>"
+        return 1
     fi
 
     log_info "Searching for packages matching '$search_term'..."
@@ -469,18 +498,19 @@ smalltalk_squeak_clean_artifacts() {
     if [[ -n "$impl_dir" && -d "$impl_dir" ]]; then
         cd "$impl_dir" || return 1
 
+        # Use glob patterns for performance
+        shopt -s nullglob
         local patterns=(
-            "Squeak*.image"
-            "Squeak*.changes"
-            "Squeak*.sources"
-            "Squeak*.app"
-            "squeak"
-            "squeak-console"
+            Squeak*.image Squeak*.changes Squeak*.sources
+            Squeak*.app squeak squeakvm
         )
-
+        
         for pattern in "${patterns[@]}"; do
-            find . -maxdepth 1 -name "$pattern" -exec rm -rf {} \; 2>/dev/null || true
+            for f in $pattern; do
+                rm -rf "$f" 2>/dev/null || true
+            done
         done
+        shopt -u nullglob
 
         manifest_remove "squeak"
         log_success "Squeak artifacts cleaned"
@@ -499,9 +529,24 @@ smalltalk_squeak_version() {
 
     cd "$squeak_dir" || return 1
 
-    # Try to detect version from image file
-    if [[ -f "./Squeak.image" ]]; then
-        echo "Squeak ${SQUEAK_VERSION:-unknown} (installed at $squeak_dir)"
+    # Try to detect version from image file name
+    local image_name
+    for img in Squeak*.image; do
+        if [[ -f "$img" ]]; then
+            image_name="$img"
+            break
+        fi
+    done
+
+    if [[ -n "$image_name" ]]; then
+        # Extract version from image name (e.g., Squeak6.0-22148.image)
+        local version
+        version=$(echo "$image_name" | grep -oE 'Squeak[0-9]+\.[0-9]+' | head -1)
+        if [[ -n "$version" ]]; then
+            echo "${version} (installed at $squeak_dir)"
+        else
+            echo "Squeak (installed at $squeak_dir)"
+        fi
     else
         echo "Squeak (installed at $squeak_dir)"
     fi
