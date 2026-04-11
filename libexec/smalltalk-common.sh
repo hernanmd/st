@@ -359,25 +359,33 @@ else
 fi
 
 log_info() {
-    printf "${COLOR_INFO}[INFO] %s${COLOR_RESET}\n" "$*"
+    if [[ "${QUIET:-0}" != "1" ]]; then
+        printf "${COLOR_INFO}[INFO] %s${COLOR_RESET}\n" "$*"
+    fi
 }
 
 log_error() {
-    printf "${COLOR_ERROR}[ERROR] %s${COLOR_RESET}\n" "$*" >&2
+    if [[ "${QUIET:-0}" != "1" ]]; then
+        printf "${COLOR_ERROR}[ERROR] %s${COLOR_RESET}\n" "$*" >&2
+    fi
 }
 
 log_success() {
-    printf "${COLOR_SUCCESS}[SUCCESS] %s${COLOR_RESET}\n" "$*"
+    if [[ "${QUIET:-0}" != "1" ]]; then
+        printf "${COLOR_SUCCESS}[SUCCESS] %s${COLOR_RESET}\n" "$*"
+    fi
 }
 
 log_debug() {
-    if [[ "${DEBUG:-0}" == "1" ]]; then
+    if [[ "${DEBUG:-0}" == "1" && "${QUIET:-0}" != "1" ]]; then
         printf "${COLOR_DEBUG}[DEBUG] %s${COLOR_RESET}\n" "$*"
     fi
 }
 
 log_warn() {
-    printf "${COLOR_WARN}[WARN] %s${COLOR_RESET}\n" "$*"
+    if [[ "${QUIET:-0}" != "1" ]]; then
+        printf "${COLOR_WARN}[WARN] %s${COLOR_RESET}\n" "$*"
+    fi
 }
 
 # Print error and exit
@@ -495,19 +503,29 @@ download_file() {
 }
 
 # Extract archive (zip, tar.gz, tar.xz)
+# Suppresses file listing by default, use VERBOSE=1 to show extracted files
 extract_archive() {
     local archive="$1"
     local dest_dir="${2:-.}"
+    
+    # Build extraction flags based on VERBOSE setting
+    local tar_flags="-f"
+    local unzip_flags="-q"
+    
+    if [[ "${VERBOSE:-0}" == "1" ]]; then
+        tar_flags="-xvf"
+        unzip_flags=""
+    fi
 
     case "$archive" in
         *.zip)
-            unzip -o "$archive" -d "$dest_dir"
+            unzip $unzip_flags -o "$archive" -d "$dest_dir"
             ;;
         *.tar.gz|*.tgz)
-            tar -xzf "$archive" -C "$dest_dir"
+            tar $tar_flags "$archive" -C "$dest_dir"
             ;;
         *.tar.xz)
-            tar -xJf "$archive" -C "$dest_dir"
+            tar $tar_flags "$archive" -C "$dest_dir"
             ;;
         *)
             die "Unsupported archive format: $archive"

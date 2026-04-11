@@ -521,6 +521,7 @@ smalltalk_cuis_version() {
         return 1
     }
 
+
     cd "$cuis_dir" || return 1
 
     # Try to get version from image
@@ -528,5 +529,31 @@ smalltalk_cuis_version() {
         grep -oP 'version \K[0-9.]+' ./run_cuis.sh 2>/dev/null || echo "Cuis (version unknown)"
     else
         echo "Cuis (installed at $cuis_dir)"
+    fi
+}
+
+smalltalk_cuis_eval() {
+    local code="${1:-}"
+    
+    if [[ -z "$code" ]]; then
+        log_error "Please provide code to evaluate"
+        echo "Usage: st cuis eval '<code>'"
+        return 1
+    fi
+    
+    local cuis_dir
+    cuis_dir=$(is_cuis_installed) || {
+        log_error "Cuis is not installed"
+        log_error "Run 'st cuis install' first"
+        return 1
+    }
+    
+    cd "$cuis_dir" || return 1
+    
+    if [[ -f "./run_cuis.sh" ]]; then
+        ./run_cuis.sh eval "$code"
+    else
+        log_error "Cuis executable not found in: $cuis_dir"
+        return 1
     fi
 }

@@ -895,3 +895,11 @@ smalltalk_squeak_version() {
         echo "Squeak (installed at $squeak_dir)"
     fi
 }
+
+smalltalk_squeak_eval() {
+    log_error "Squeak does not support command-line code evaluation"
+    log_info "Squeak requires a GUI environment to run"
+    log_info "Run 'st squeak run' to launch the Squeak UI"
+    log_info "For headless evaluation, consider using Pharo or GNU Smalltalk"
+    return 1
+}

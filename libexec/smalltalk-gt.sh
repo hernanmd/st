@@ -102,9 +102,13 @@ download_gt() {
                 # Use bsdtar for better cross-platform zip handling (from libarchive)
                 # Falls back to unzip if bsdtar is not available
                 if cmd_exists bsdtar; then
-                    bsdtar -xvf "$archive_file"
+                    local tar_v=""
+                    [[ "${VERBOSE:-0}" == "1" ]] && tar_v="v"
+                    bsdtar -x${tar_v}f "$archive_file"
                 elif cmd_exists unzip; then
-                    unzip -o "$archive_file"
+                    local unzip_flags="-q"
+                    [[ "${VERBOSE:-0}" == "1" ]] && unzip_flags=""
+                    unzip $unzip_flags -o "$archive_file"
                 else
                     log_error "Neither bsdtar nor unzip is available"
                     rm -f "$archive_file"
@@ -222,15 +226,42 @@ smalltalk_gt_install() {
 }
 
 smalltalk_gt_run() {
-    local cmd="${1:-}"
+    local target_dir=""
+    local cmd=""
+    
+    # Parse options
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -d|--dir)
+                target_dir="$2"
+                shift 2
+                ;;
+            *)
+                cmd="$1"
+                shift
+                break
+                ;;
+        esac
+    done
+    
     local gt_dir
-    gt_dir=$(is_gt_installed) || {
-        log_info "GT not found, installing..."
-        download_gt
-        gt_dir="."
-    }
-
-    cd "$gt_dir" || die "Cannot change to GT directory"
+    
+    # If target directory specified, use it; otherwise search for existing GT
+    if [[ -n "$target_dir" ]]; then
+        gt_dir="$target_dir"
+    else
+        gt_dir=$(is_gt_installed) || {
+            log_info "GT not found, installing..."
+            # Create timestamped directory if no -d specified
+            local timestamp
+            timestamp=$(date +%Y%m%d_%H%M%S)
+            gt_dir="GlamorousToolkit_${timestamp}"
+            log_info "Creating directory: $gt_dir"
+            download_gt "$GT_VERSION" "$gt_dir"
+        }
+    fi
+    
+    cd "$gt_dir" || die "Cannot change to GT directory: $gt_dir"
 
     # If no command, just run the UI
     if [[ -z "$cmd" ]]; then
@@ -425,4 +456,38 @@ smalltalk_gt_version() {
     fi
 
     echo "Glamorous Toolkit version unknown (files found but version command failed)"
+}
+
+smalltalk_gt_eval() {
+    local code="${1:-}"
+    
+    if [[ -z "$code" ]]; then
+        log_error "Please provide code to evaluate"
+        echo "Usage: st gt eval '<code>'"
+        return 1
+    fi
+    
+    local gt_dir
+    gt_dir=$(is_gt_installed) || {
+        log_error "Glamorous Toolkit is not installed"
+        log_error "Run 'st gt install' first"
+        return 1
+    }
+    
+    cd "$gt_dir" || return 1
+    
+    local gt_image="${gt_dir}/GlamorousToolkit.image"
+    local gt_executable="${gt_dir}/GlamorousToolkit"
+    
+    # Fallback to pharo executable if GT executable doesn't exist
+    if [[ -f "${gt_dir}/pharo" ]]; then
+        gt_executable="${gt_dir}/pharo"
+    fi
+    
+    if [[ -f "$gt_executable" ]]; then
+        "$gt_executable" --headless "$gt_image" eval "$code"
+    else
+        log_error "GT executable not found in: $gt_dir"
+        return 1
+    fi
 }

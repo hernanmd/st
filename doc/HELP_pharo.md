@@ -61,6 +61,7 @@ st pharo install Seaside          # Install Pharo with Seaside package
 st pharo install Seaside NeoCSV   # Install with multiple packages
 st pharo install -d ~/p Seaside   # Install to directory with package
 st -x pharo install               # Install with debug output
+st -v pharo install           # Install with verbose output
 st pharo run                      # Run Pharo
 st pharo search polyglot          # Search for packages
 st pharo clean-artifacts          # Clean installed files

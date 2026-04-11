@@ -713,6 +713,32 @@ smalltalk_pharo_clean_artifacts() {
     fi
 }
 
+smalltalk_pharo_eval() {
+    local code="${1:-}"
+    
+    if [[ -z "$code" ]]; then
+        log_error "Please provide code to evaluate"
+        echo "Usage: st pharo eval '<code>'"
+        return 1
+    fi
+    
+    local pharo_dir
+    pharo_dir=$(is_pharo_installed) || {
+        log_error "Pharo is not installed"
+        log_error "Run 'st pharo install' first"
+        return 1
+    }
+    
+    cd "$pharo_dir" || return 1
+    
+    if [[ -f "./pharo" ]]; then
+        ./pharo --headless Pharo.image eval "$code"
+    else
+        log_error "Pharo executable not found in: $pharo_dir"
+        return 1
+    fi
+}
+
 smalltalk_pharo_version() {
     local pharo_dir
     pharo_dir=$(is_pharo_installed) || {

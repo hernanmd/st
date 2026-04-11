@@ -11,7 +11,8 @@ st [-x] squeak <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install [ver] [-d dir]` | Install Squeak (options: stable, 6.1, 6.0, 5.3) |
-| `run` | Run Squeak |
+| `run` |
+| `eval <code>` | Evaluate Smalltalk code (headless) | Run Squeak |
 | `search <term>` | Search for packages |
 | `list` | List available packages |
 | `update` | Update package information |
@@ -53,7 +54,9 @@ st squeak install                    # Install latest stable Squeak
 st squeak install 6.0                # Install Squeak 6.0
 st squeak install -d ~/squeak        # Install to specific directory
 st -x squeak install                 # Install with debug output
+st -v pharo install           # Install with verbose output
 st squeak run                        # Run Squeak
+st squeak eval '1 + 2'
 st squeak version                    # Show installed version
 ```
 

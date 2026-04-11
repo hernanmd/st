@@ -287,3 +287,22 @@ smalltalk_lst_version() {
         echo "Little Smalltalk v3"
     fi
 }
+
+smalltalk_lst_eval() {
+    local code="${1:-}"
+    
+    if [[ -z "$code" ]]; then
+        log_error "Please provide code to evaluate"
+        echo "Usage: st lst eval '<code>'"
+        return 1
+    fi
+    
+    local lst_path
+    lst_path=$(is_lst_installed) || {
+        log_error "Little Smalltalk v3 is not installed"
+        log_error "Run 'st lst install' first"
+        return 1
+    }
+    
+    echo "$code" | lst3r
+}

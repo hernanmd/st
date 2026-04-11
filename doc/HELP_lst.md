@@ -11,7 +11,8 @@ st [-x] lst <command>
 | Command | Description |
 |---------|-------------|
 | `install [--build]` | Install LST (use --build to compile from source) |
-| `run [args]` | Run Little Smalltalk |
+| `run [args]` |
+| `eval <code>` | Evaluate Smalltalk code (headless) | Run Little Smalltalk |
 | `search <term>` | Search for packages |
 | `list` | List available packages |
 | `update` | Update package information |
@@ -37,8 +38,10 @@ Example: `st -x lst install`
 st lst install           # Download prebuilt binary
 st lst install --build  # Build from source
 st -x lst install       # Install with debug output
+st -v pharo install           # Install with verbose output
 st lst run              # Start REPL
 st lst run script.lst3   # Run a .lst3 file
+st lst eval '1 + 2'
 ```
 
 ## About Little Smalltalk v3

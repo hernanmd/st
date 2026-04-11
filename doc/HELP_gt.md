@@ -11,7 +11,7 @@ st [-x] gt <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install [-d dir]` | Install Glamorous Toolkit to the specified directory |
-| `run [cmd]` | Run GT (with optional Clap commands) |
+| `run [cmd] [-d dir]` | Run GT (with optional Clap commands) |
 | `search <term>` | Search for packages |
 | `list` | List available packages |
 | `update` | Update package information |
@@ -22,7 +22,8 @@ st [-x] gt <command> [options]
 
 ## Options
 
-- `-d, --dir <path>` - Installation directory (default: current directory)
+- `-d, --dir <path>` - Target directory (for `install` and `run` commands)
+  - If not specified for `run`, a timestamped directory `GlamorousToolkit_YYYYMMDD_HHMMSS` is created
 
 ## Debug Mode
 
@@ -49,9 +50,12 @@ Run as: `st gt run <cmd>`
 st gt install           # Install GT to current directory
 st gt install -d ~/gt   # Install GT to ~/gt
 st -x gt install        # Install with debug output
-st gt run               # Run GT
+st -v pharo install           # Install with verbose output
+st gt run               # Run GT (creates timestamped dir if needed)
+st gt run -d ~/gt       # Run GT from ~/gt directory
 st gt run metacello 'BaselineOfPha...'
-st gt run eval '1+2'
+st gt eval '1+2'
+st gt eval '42 inspect'
 ```
 
 ## About Glamorous Toolkit

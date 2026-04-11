@@ -260,3 +260,21 @@ smalltalk_gnu_version() {
         return 1
     fi
 }
+
+smalltalk_gnu_eval() {
+    local code="${1:-}"
+    
+    if [[ -z "$code" ]]; then
+        log_error "Please provide code to evaluate"
+        echo "Usage: st gnu eval '<code>'"
+        return 1
+    fi
+    
+    if ! is_gnustack_installed; then
+        log_error "GNU Smalltalk is not installed"
+        log_error "Run 'st gnu install' first"
+        return 1
+    fi
+    
+    echo "$code" | gst --quiet
+}
