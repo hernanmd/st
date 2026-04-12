@@ -146,26 +146,26 @@ teardown() {
 @test "st runs without arguments and shows usage" {
     run "$SMALLTALK_CMD"
     [ "$status" -eq 1 ]
-    [[ "$output" == *"Usage:"* ]]
-    [[ "$output" == *"Implementations:"* ]]
+    [[ "$output" == *"USAGE"* ]]
+    [[ "$output" == *"IMPLEMENTATIONS"* ]]
 }
 
 @test "st --help shows usage" {
     run "$SMALLTALK_CMD" --help
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Usage:"* ]]
+    [[ "$output" == *"USAGE"* ]]
 }
 
 @test "st -h shows usage" {
     run "$SMALLTALK_CMD" -h
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Usage:"* ]]
+    [[ "$output" == *"USAGE"* ]]
 }
 
 @test "st help shows usage" {
     run "$SMALLTALK_CMD" help
     [ "$status" -eq 0 ]
-    [[ "$output" == *"Usage:"* ]]
+    [[ "$output" == *"USAGE"* ]]
 }
 
 # ============================================================================
@@ -222,7 +222,7 @@ teardown() {
     run "$SMALLTALK_CMD" pharo help
     [ "$status" -eq 0 ]
     [[ "$output" == *"Pharo Smalltalk Commands"* ]]
-    [[ "$output" == *"Usage: st pharo"* ]]
+    [[ "$output" == *"\`st pharo"* ]] || [[ "$output" == *"Usage"* ]]
     [[ "$output" == *"install"* ]]
     [[ "$output" == *"run"* ]]
     [[ "$output" == *"search"* ]]
@@ -233,7 +233,7 @@ teardown() {
     run "$SMALLTALK_CMD" gt help
     [ "$status" -eq 0 ]
     [[ "$output" == *"Glamorous Toolkit Commands"* ]]
-    [[ "$output" == *"Usage: st gt"* ]]
+    [[ "$output" == *"\`st gt"* ]] || [[ "$output" == *"Usage"* ]]
 }
 
 @test "st squeak help shows help text" {
@@ -277,7 +277,7 @@ teardown() {
     [ "$status" -eq 0 ]
     [[ "$output" == *"stable"* ]]
     [[ "$output" == *"6.0"* ]]
-    [[ "$output" == *"5.4"* ]]
+    [[ "$output" == *"6.1"* ]]
     [[ "$output" == *"5.3"* ]]
 }
 

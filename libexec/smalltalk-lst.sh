@@ -11,37 +11,25 @@ source "${BASH_SOURCE%/*}/smalltalk-common.sh"
 ## Little Smalltalk Configuration
 #################################
 
-LST_VERSION="${LST_VERSION:-latest}"
-LST_URL_BASE="https://codeberg.org/suetanvil/lst3r"
-LST_CACHE_DIR="${CACHE_DIR}/lst"
+LST_VERSION="${LST_VERSION:-main}"
+LST_URL="https://codeberg.org/suetanvil/lst3r/archive/main.zip"
 
 #################################
 ## Little Smalltalk Helper Functions
 #################################
 
-# Get latest LST release from GitLab/Codeberg
-get_latest_lst_version() {
-    local version
-    version=$(curl -sL "https://codeberg.org/api/v1/repos/suetanvil/lst3r/releases/latest" 2>/dev/null | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/' || echo "v3")
-    echo "$version"
-}
-
-# Check if LST is installed
+# Check if LST is installed and working
 is_lst_installed() {
-    local search_paths=("." "$HOME/lst3r" "$HOME/.local/bin/lst3r")
+    local search_paths=(".")
 
     for path in "${search_paths[@]}"; do
-        if [[ -f "${path}/lst3r" ]] || [[ -x "${path}/lst3r" ]]; then
-            echo "$path"
-            return 0
-        fi
-        if [[ -d "${path}/lst3r" ]] && [[ -f "${path}/lst3r/lst3r" ]]; then
-            echo "$path/lst3r"
+        if [[ -f "${path}/lst3r" ]] && [[ -x "${path}/lst3r" ]]; then
+            echo "$(pwd)"
             return 0
         fi
     done
 
-    # Also check PATH
+    # Check PATH
     if command -v lst3r &>/dev/null; then
         echo "system"
         return 0
@@ -50,31 +38,53 @@ is_lst_installed() {
     return 1
 }
 
-# Download and build LST from source
-download_lst_source() {
-    local install_dir="${1:-$HOME/lst3r}"
+# Download and build LST from source archive
+download_lst() {
+    local install_dir="${1:-.}"
 
-    log_info "Downloading Little Smalltalk v3 source to ${install_dir}..."
+    log_info "Downloading Little Smalltalk v3 to ${install_dir}..."
 
     # Ensure the directory exists
     mkdir -p "$install_dir"
     cd "$install_dir" || die "Cannot change to directory: $install_dir"
 
-    # Clone the repository
-    if [[ ! -d ".git" ]]; then
-        git clone "https://codeberg.org/suetanvil/lst3r.git" "$install_dir" 2>/dev/null || {
-            # Try GitHub mirror if Codeberg fails
-            git clone "https://github.com/nordlow/lst3r.git" "$install_dir" 2>/dev/null || {
-                die "Failed to clone LST repository"
-            }
-        }
+    install_dir="$(pwd)"
+
+    # Download the archive
+    local archive_name="main.zip"
+    download_file "$LST_URL" "$archive_name"
+
+    if [[ ! -f "$archive_name" ]]; then
+        die "Failed to download Little Smalltalk v3"
     fi
 
-    cd "$install_dir" || die "Cannot change to LST directory"
+    # Extract the archive
+    log_info "Extracting archive..."
+    extract_archive "$archive_name" "$install_dir"
+    rm -f "$archive_name"
 
+    # The archive extracts to a directory like "lst3r-main"
+    # Find the extracted directory
+    local extracted_dir=""
+    for dir in lst3r-* lst3r; do
+        if [[ -d "$dir" ]]; then
+            extracted_dir="$dir"
+            break
+        fi
+    done
+
+    if [[ -z "$extracted_dir" ]]; then
+        die "Failed to find extracted LST directory"
+    fi
+
+    # Move contents of extracted directory to install_dir
+    log_info "Moving files to installation directory..."
+    mv "$extracted_dir"/* . 2>/dev/null || true
+    mv "$extracted_dir"/.* . 2>/dev/null || true
+    rmdir "$extracted_dir" 2>/dev/null || true
+
+    # Build the lst3r binary
     log_info "Building Little Smalltalk v3..."
-
-    # Detect build system
     if [[ -f "Makefile" ]]; then
         make -j"$(nproc 2>/dev/null || echo 4)" || die "Build failed"
     elif [[ -f "CMakeLists.txt" ]]; then
@@ -83,75 +93,16 @@ download_lst_source() {
         cmake .. || die "CMake configuration failed"
         make -j"$(nproc 2>/dev/null || echo 4)" || die "Build failed"
         cd ..
-    elif [[ -f "meson.build" ]]; then
-        meson setup build || die "Meson setup failed"
-        meson compile -C build || die "Build failed"
     else
-        die "No build system found. Expected Makefile, CMakeLists.txt, or meson.build"
+        die "No build system found. Expected Makefile or CMakeLists.txt"
     fi
 
     # Ensure lst3r is executable
     if [[ -f "./lst3r" ]]; then
         chmod +x ./lst3r
-    fi
-
-    log_info "LST installed to: $install_dir/lst3r"
-    log_info "Add $install_dir to your PATH to use 'lst3r' directly"
-
-    log_success "Little Smalltalk v3 installed successfully to ${install_dir}"
-}
-
-# Download prebuilt LST binary
-download_lst_binary() {
-    local install_dir="${1:-.}"
-
-    log_info "Downloading Little Smalltalk v3 to ${install_dir}..."
-
-    local os_type
-    os_type=$(get_os)
-    local arch
-    arch=$(get_arch)
-
-    # Ensure the directory exists
-    mkdir -p "$install_dir"
-    cd "$install_dir" || die "Cannot change to directory: $install_dir"
-
-    install_dir="$(pwd)"
-    local download_url
-    local archive_name
-
-    case "$os_type" in
-        macos)
-            archive_name="lst3r-macos.tar.gz"
-            download_url="https://github.com/nordlow/lst3r/releases/latest/download/lst3r-macos.tar.gz"
-            ;;
-        linux)
-            if [[ "$arch" == "x86_64" ]]; then
-                archive_name="lst3r-linux.tar.gz"
-                download_url="https://github.com/nordlow/lst3r/releases/latest/download/lst3r-linux.tar.gz"
-            else
-                die "No prebuilt binary for $arch. Use --build from source instead."
-            fi
-            ;;
-        *)
-            die "No prebuilt binary for $os_type. Use --build from source instead."
-            ;;
-    esac
-
-    download_file "$download_url" "$archive_name"
-
-    if [[ -f "$archive_name" ]]; then
-        extract_archive "$archive_name"
-        rm -f "$archive_name"
-
-        if [[ -f "./lst3r" ]]; then
-            chmod +x ./lst3r
-            log_success "Little Smalltalk v3 installed successfully"
-        else
-            die "Failed to extract LST"
-        fi
+        log_success "Little Smalltalk v3 installed successfully to ${install_dir}"
     else
-        die "Failed to download Little Smalltalk v3"
+        die "Build failed: lst3r binary not found"
     fi
 }
 
@@ -179,69 +130,109 @@ smalltalk_lst_help() {
     load_help_from_doc "lst"
 }
 
-
 smalltalk_lst_install() {
-    local build_from_source=false
-    local install_arg=""
+    local install_dir="."
+    local remaining=""
 
-    # Handle case when no arguments provided (set -u safety)
-    if [[ $# -gt 0 ]]; then
-        if [[ "$1" == "--build" ]]; then
-            build_from_source=true
-            shift
-        fi
-        if [[ $# -gt 0 ]]; then
-            install_arg="$1"
+    # Parse options
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -d|--dir)
+                install_dir="$2"
+                shift 2
+                ;;
+            -*)
+                log_error "Unknown option: $1"
+                echo "Usage: st lst install [-d <dir>]"
+                return 1
+                ;;
+            *)
+                remaining="$remaining $1"
+                shift
+                ;;
+        esac
+    done
+
+    # Check for existing Smalltalk installation
+    if [[ -d "$install_dir" ]]; then
+        local existing
+        existing=$(detect_existing_smalltalk "$install_dir")
+        if [[ -n "$existing" && "$existing" != "lst" ]]; then
+            log_error "Directory $install_dir already contains a $existing installation"
+            log_error "Use a different directory or remove the existing installation first"
+            return 1
         fi
     fi
 
-    local install_dir="${install_arg:-$HOME/lst3r}"
-
-    # If no destination specified, use timestamped directory
-    if [[ -z "$install_arg" ]]; then
+    # If no destination specified, create timestamped subdirectory
+    if [[ "$install_dir" == "." ]]; then
         local timestamp
         timestamp=$(date +%Y%m%d_%H%M%S)
         install_dir="lst3r_${timestamp}"
         log_info "No destination specified. Creating directory: $install_dir"
+        mkdir -p "$install_dir"
     fi
 
-    # Create directory if needed
-    mkdir -p "$install_dir"
-
-    if $build_from_source; then
-        download_lst_source "$install_dir"
-    else
-        download_lst_binary "$install_dir"
-    fi
+    download_lst "$install_dir"
 }
 
 smalltalk_lst_run() {
-    run_lst "$@"
+    local target_dir=""
+    local extra_args=""
+
+    # Parse options
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -d|--dir)
+                target_dir="$2"
+                shift 2
+                ;;
+            *)
+                extra_args="$extra_args $1"
+                shift
+                ;;
+        esac
+    done
+
+    local lst_dir
+
+    # If target directory specified, use it; otherwise search for existing LST
+    if [[ -n "$target_dir" ]]; then
+        lst_dir="$target_dir"
+    else
+        lst_dir=$(is_lst_installed) || {
+            log_info "LST not found, installing..."
+            # Create timestamped directory if no -d specified
+            local timestamp
+            timestamp=$(date +%Y%m%d_%H%M%S)
+            lst_dir="lst3r_${timestamp}"
+            log_info "Creating directory: $lst_dir"
+            download_lst "$lst_dir"
+            lst_dir="$(pwd)/lst3r_${timestamp}"
+        }
+    fi
+
+    cd "$lst_dir" || die "Cannot change to LST directory: $lst_dir"
+
+    run_lst $extra_args
 }
 
 smalltalk_lst_search() {
-    log_info "Searching for Little Smalltalk packages..."
-    log_info "Visit https://codeberg.org/suetanvil/lst3r to browse packages"
+    log_info "Little Smalltalk v3 does not support package searching"
+    log_info "Visit https://codeberg.org/suetanvil/lst3r to learn more"
 }
 
 smalltalk_lst_list() {
-    log_info "Available packages for Little Smalltalk:"
-    log_info "Visit https://codeberg.org/suetanvil/lst3r to browse packages"
+    log_info "Little Smalltalk v3 does not support package listing"
+    log_info "Visit https://codeberg.org/suetanvil/lst3r to learn more"
 }
 
 smalltalk_lst_update() {
-    ensure_cache_dir
-    mkdir -p "${LST_CACHE_DIR}"
-    log_info "LST package information updated"
+    log_info "Little Smalltalk v3 does not require package updates"
 }
 
 smalltalk_lst_clean() {
-    if [[ -d "${LST_CACHE_DIR}" ]]; then
-        rm -rf "${LST_CACHE_DIR:?}"/*
-        log_info "LST cache cleaned"
-    else
-        log_info "LST cache directory does not exist"
-    fi
+    log_info "Little Smalltalk v3 does not maintain a cache"
 }
 
 smalltalk_lst_clean_artifacts() {
@@ -253,20 +244,15 @@ smalltalk_lst_clean_artifacts() {
     if [[ -n "$impl_dir" && -d "$impl_dir" ]]; then
         cd "$impl_dir" || return 1
 
-        local patterns=(
-            "lst3r"
-            "*.st"
-        )
-
-        for pattern in "${patterns[@]}"; do
-            find . -maxdepth 1 -name "$pattern" -exec rm -rf {} \; 2>/dev/null || true
-        done
+        # Clean build artifacts but keep source
+        rm -f lst3r 2>/dev/null || true
+        rm -rf build 2>/dev/null || true
+        rm -f *.o *.a 2>/dev/null || true
 
         manifest_remove "lst"
-        log_success "Little Smalltalk artifacts cleaned"
+        log_success "Little Smalltalk build artifacts cleaned"
     else
         log_info "No registered LST installation found in manifest"
-        log_info "To clean manually, remove LST files from your installation directory"
     fi
 }
 
@@ -277,32 +263,17 @@ smalltalk_lst_version() {
         return 1
     }
 
-    if [[ "$lst_path" == "system" ]] || [[ -f "$lst_path/lst3r" ]] || [[ -f "$lst_path" ]]; then
-        if [[ "$lst_path" == "system" ]]; then
-            lst3r --version 2>/dev/null || echo "LST (version unknown)"
-        else
-            "$lst_path/lst3r" --version 2>/dev/null || echo "LST (version unknown)"
-        fi
+    if [[ "$lst_path" == "system" ]]; then
+        lst3r --version 2>/dev/null || echo "LST (version unknown)"
+    elif [[ -f "${lst_path}/lst3r" ]]; then
+        "${lst_path}/lst3r" --version 2>/dev/null || echo "LST (version unknown)"
     else
         echo "Little Smalltalk v3"
     fi
 }
-
+# LST does not support command-line code evaluation
 smalltalk_lst_eval() {
-    local code="${1:-}"
-    
-    if [[ -z "$code" ]]; then
-        log_error "Please provide code to evaluate"
-        echo "Usage: st lst eval '<code>'"
-        return 1
-    fi
-    
-    local lst_path
-    lst_path=$(is_lst_installed) || {
-        log_error "Little Smalltalk v3 is not installed"
-        log_error "Run 'st lst install' first"
-        return 1
-    }
-    
-    echo "$code" | lst3r
+    log_error "LST does not support command-line code evaluation"
+    log_info "Use 'st lst run' to start the LST REPL"
+    return 1
 }

@@ -3,27 +3,29 @@
 ## Usage
 
 ```bash
-st [-x] lst <command>
+st [-x] lst <command> [options]
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `install [--build]` | Install LST (use --build to compile from source) |
-| `run [args]` |
-| `eval <code>` | Evaluate Smalltalk code (headless) | Run Little Smalltalk |
-| `search <term>` | Search for packages |
-| `list` | List available packages |
-| `update` | Update package information |
-| `clean` | Clean cache directory |
-| `clean_artifacts` | Clean installed artifacts |
+| `install [-d dir]` | Install LST (downloads and builds from source) |
+| `run [args] [-d dir]` | Run LST (builds if needed) |
 | `version` | Show LST version |
+| `clean-artifacts` | Clean build artifacts |
 | `help` | Show this help message |
 
 ## Options
 
-- `--build` - Build from source instead of prebuilt binary
+- `-d, --dir <path>` - Target directory for installation or run
+
+## Notes
+
+- LST must be built from source (downloads archive and runs make)
+- LST does not support Windows
+- LST does not have packages (no search, list, update)
+- LST does not support headless code evaluation from CLI
 
 ## Debug Mode
 
@@ -35,17 +37,17 @@ Example: `st -x lst install`
 ## Examples
 
 ```bash
-st lst install           # Download prebuilt binary
-st lst install --build  # Build from source
-st -x lst install       # Install with debug output
-st -v pharo install           # Install with verbose output
-st lst run              # Start REPL
-st lst run script.lst3   # Run a .lst3 file
-st lst eval '1 + 2'
+st lst install                # Download, build and install LST
+st lst install -d ~/lst3r    # Install to specific directory
+st -x lst install            # Install with debug output
+st -v lst install            # Install with verbose output
+st lst run                   # Run LST REPL
+st lst run -d ~/lst3r        # Run from specific directory
+st lst version               # Show LST version
 ```
 
 ## About Little Smalltalk v3
 
 Little Smalltalk is a simplified Smalltalk dialect designed
-for learning and teaching. Version 3 is a modern rewrite.
+for learning and teaching. Version 3 is a modern rewrite in C.
 Repository: https://codeberg.org/suetanvil/lst3r
