@@ -98,8 +98,8 @@ download_lst() {
     fi
 
     # Ensure lst3r is executable
-    if [[ -f "./lst3r" ]]; then
-        chmod +x ./lst3r
+    if [[ -f "./${install_dir}/lst3r" ]]; then
+        chmod +x ./${install_dir}/lst3r
         log_success "Little Smalltalk v3 installed successfully to ${install_dir}"
     else
         die "Build failed: lst3r binary not found"

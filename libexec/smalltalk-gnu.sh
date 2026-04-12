@@ -19,6 +19,18 @@ GNUSTACK_CACHE_DIR="${CACHE_DIR}/gnu"
 ## GNU Smalltalk Helper Functions
 #################################
 
+# Unalias gst if it exists (Zsh omz git plugin may alias gst to git status)
+unescape_gst_alias() {
+    if [[ -n "${ZSH_VERSION:-}" ]] || [[ -n "${BASH_VERSION:-}" ]]; then
+        # Check if gst is an alias
+        local gst_type
+        gst_type=$(type gst 2>/dev/null || true)
+        if [[ "$gst_type" == *"is an alias"* ]]; then
+            unalias gst 2>/dev/null || true
+        fi
+    fi
+}
+
 # Check if GNU Smalltalk is installed
 is_gnustack_installed() {
     if command -v gst &>/dev/null; then
@@ -57,7 +69,7 @@ install_gnustack_from_source() {
     local archive_name="smalltalk-${GNUSTACK_VERSION}.tar.xz"
     local download_url="${GNUSTACK_URL_BASE}/${archive_name}"
 
-        install_dir="$(pwd)"
+    install_dir="$(pwd)"
     log_info "Downloading GNU Smalltalk ${GNUSTACK_VERSION} to ${install_dir}..."
     download_file "$download_url" "$archive_name"
 
@@ -143,6 +155,9 @@ run_gnustack() {
     if ! is_gnustack_installed; then
         die "GNU Smalltalk is not installed. Run 'st gnu install' first."
     fi
+
+    # Unalias gst if it's an alias (Zsh omz git plugin)
+    unescape_gst_alias
 
     # Run gst with any additional arguments
     if [[ $# -eq 0 ]]; then
@@ -254,6 +269,8 @@ smalltalk_gnu_clean_artifacts() {
 
 smalltalk_gnu_version() {
     if is_gnustack_installed; then
+        # Unalias gst if it's an alias (Zsh omz git plugin)
+        unescape_gst_alias
         gst --version
     else
         echo "GNU Smalltalk is not installed"
@@ -275,6 +292,9 @@ smalltalk_gnu_eval() {
         log_error "Run 'st gnu install' first"
         return 1
     fi
+    
+    # Unalias gst if it's an alias (Zsh omz git plugin)
+    unescape_gst_alias
     
     echo "$code" | gst --quiet
 }
