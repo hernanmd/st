@@ -23,14 +23,14 @@ is_lst_installed() {
     local search_paths=(".")
 
     for path in "${search_paths[@]}"; do
-        if [[ -f "${path}/lst3r" ]] && [[ -x "${path}/lst3r" ]]; then
+        if [[ -f "${path}/lst3" ]] && [[ -x "${path}/lst3" ]]; then
             echo "$(pwd)"
             return 0
         fi
     done
 
     # Check PATH
-    if command -v lst3r &>/dev/null; then
+    if command -v lst3 &>/dev/null; then
         echo "system"
         return 0
     fi
@@ -83,7 +83,7 @@ download_lst() {
     mv "$extracted_dir"/.* . 2>/dev/null || true
     rmdir "$extracted_dir" 2>/dev/null || true
 
-    # Build the lst3r binary
+    # Build the  binary
     log_info "Building Little Smalltalk v3..."
     if [[ -f "Makefile" ]]; then
         make -j"$(nproc 2>/dev/null || echo 4)" || die "Build failed"
@@ -97,12 +97,12 @@ download_lst() {
         die "No build system found. Expected Makefile or CMakeLists.txt"
     fi
 
-    # Ensure lst3r is executable
-    if [[ -f "./${install_dir}/lst3r" ]]; then
-        chmod +x ./${install_dir}/lst3r
+    # Ensure lst3 is executable
+    if [[ -f "./${install_dir}/lst3" ]]; then
+        chmod +x ./"${install_dir}"/lst3
         log_success "Little Smalltalk v3 installed successfully to ${install_dir}"
     else
-        die "Build failed: lst3r binary not found"
+        die "Build failed: lst3 binary not found"
     fi
 }
 
@@ -112,9 +112,9 @@ run_lst() {
     lst_path=$(is_lst_installed) || die "LST is not installed. Run 'st lst install' first."
 
     if [[ "$lst_path" == "system" ]]; then
-        lst3r "$@"
-    elif [[ -f "${lst_path}/lst3r" ]]; then
-        "${lst_path}/lst3r" "$@"
+        lst3 "$@"
+    elif [[ -f "${lst_path}/lst3" ]]; then
+        "${lst_path}/lst3" "$@"
     elif [[ -f "$lst_path" ]]; then
         "$lst_path" "$@"
     else
@@ -264,9 +264,9 @@ smalltalk_lst_version() {
     }
 
     if [[ "$lst_path" == "system" ]]; then
-        lst3r --version 2>/dev/null || echo "LST (version unknown)"
-    elif [[ -f "${lst_path}/lst3r" ]]; then
-        "${lst_path}/lst3r" --version 2>/dev/null || echo "LST (version unknown)"
+        lst3 --version 2>/dev/null || echo "LST (version unknown)"
+    elif [[ -f "${lst_path}/lst3" ]]; then
+        "${lst_path}/lst3" --version 2>/dev/null || echo "LST (version unknown)"
     else
         echo "Little Smalltalk v3"
     fi
