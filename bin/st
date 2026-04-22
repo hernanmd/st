@@ -3,7 +3,7 @@
 # smalltalk - A unified CLI for Smalltalk implementations
 # Usage: smalltalk [--debug] <implementation> <command> [options]
 #
-# Implementations: pharo, cuis, gt, squeak, gnu, lst
+# Implementations: pharo, cuis, gt, squeak, gnu, lst, ls4
 # Commands: install, run, search, list, update, clean, clean-artifacts, help
 #
 set -u
@@ -55,6 +55,7 @@ print_usage() {
         $'  squeak      Squeak Smalltalk (https://squeak.org)' \
         $'  gnu         GNU Smalltalk (https://gnu.org/software/smalltalk)' \
         $'  lst         Little Smalltalk (https://codeberg.org/suetanvil/lst3r)' \
+        $'  ls4        Little Smalltalk v4 (https://github.com/kyle-github/littlesmalltalk)' \
         '' \
         $'\033[1mCOMMANDS\033[0m' \
         $'  install          Install the Smalltalk implementation or a package' \
@@ -110,7 +111,7 @@ main() {
             local target="${3:-}"
             if [[ -z "$target" ]]; then
                 clean_all_artifacts
-            elif [[ "$target" == "pharo" || "$target" == "gt" || "$target" == "cuis" || "$target" == "squeak" || "$target" == "gnu" || "$target" == "lst" ]]; then
+            elif [[ "$target" == "pharo" || "$target" == "gt" || "$target" == "cuis" || "$target" == "squeak" || "$target" == "gnu" || "$target" == "lst" || "$target" == "ls4" ]]; then
                 source "${LIBEXEC_DIR}/smalltalk-${target}.sh"
                 "smalltalk_${target}_clean_artifacts"
             else
@@ -138,7 +139,7 @@ main() {
 
     # Validate implementation
     case "$impl" in
-        pharo|cuis|gt|squeak|gnu|lst)
+        pharo|cuis|gt|squeak|gnu|lst|ls4)
             ;;
         *)
             echo "Error: Unknown implementation '$impl'" >&2
@@ -158,7 +159,7 @@ main() {
 
     # Execute the command
     case "$cmd" in
-        install|run|search|list|update|clean|clean_artifacts|help|version|eval)
+        install|run|search|list|update|clean|clean_artifacts|help|version|eval|versions)
             "smalltalk_${impl}_${cmd}" "${@:3}"
             ;;
         *)

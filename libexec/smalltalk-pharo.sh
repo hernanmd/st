@@ -739,6 +739,29 @@ smalltalk_pharo_eval() {
     fi
 }
 
+smalltalk_pharo_versions() {
+    log_info "Fetching available Pharo versions from get.pharo.org..."
+    
+    local page_url="https://get.pharo.org/archive/80/"
+    local versions
+    
+    # Extract version numbers from URLs, filter to just base versions (no variants)
+    versions=$(curl -s "$page_url" 2>/dev/null | grep -o 'https://get\.pharo\.org/[^"'\'')<]*' | \
+        sed 's|https://get\.pharo\.org/||' | \
+        grep -oE '^[0-9]+[0-9\.]*' | \
+        sort -u -V -r || true)
+    
+    if [[ -z "$versions" ]]; then
+        log_error "Failed to fetch versions from get.pharo.org"
+        return 1
+    fi
+    
+    echo "Available Pharo versions:"
+    echo "$versions" | while IFS= read -r version; do
+        echo "  $version"
+    done
+}
+
 smalltalk_pharo_version() {
     local pharo_dir
     pharo_dir=$(is_pharo_installed) || {

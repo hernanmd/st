@@ -595,6 +595,12 @@ detect_existing_smalltalk() {
         return 0
     fi
 
+    # LS4 detection
+    if [[ -f "${dir}/build/lst" ]] || command -v lst &>/dev/null; then
+        echo "ls4"
+        return 0
+    fi
+
     return 1
 }
 

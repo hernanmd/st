@@ -428,6 +428,25 @@ smalltalk_gt_clean_artifacts() {
     fi
 }
 
+smalltalk_gt_versions() {
+    log_info "Fetching available GT versions from GitHub releases..."
+    
+    local api_url="https://api.github.com/repos/feenkcom/gtoolkit/releases"
+    local versions
+    
+    versions=$(curl -s "$api_url" 2>/dev/null | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4 | sort -V -r || true)
+    
+    if [[ -z "$versions" ]]; then
+        log_error "Failed to fetch versions from GitHub"
+        return 1
+    fi
+    
+    echo "Available Glamorous Toolkit versions:"
+    echo "$versions" | while IFS= read -r version; do
+        echo "  $version"
+    done
+}
+
 smalltalk_gt_version() {
     local gt_dir
     gt_dir=$(is_gt_installed) || {
