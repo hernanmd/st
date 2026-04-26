@@ -539,7 +539,7 @@ smalltalk_cuis_version() {
 }
 
 smalltalk_cuis_eval() {
-    local code="${1:-}"
+    local code="$*"
     
     if [[ -z "$code" ]]; then
         log_error "Please provide code to evaluate"

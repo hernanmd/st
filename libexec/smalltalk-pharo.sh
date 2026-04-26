@@ -550,7 +550,6 @@ smalltalk_pharo_install() {
 }
 
 smalltalk_pharo_run() {
-    local cmd="${1:-}"
     local pharo_dir
     local original_dir="$(pwd)"
     
@@ -581,79 +580,19 @@ smalltalk_pharo_run() {
         cd "$pharo_dir" || die "Cannot change to Pharo directory: $pharo_dir"
     fi
 
-    # If no command, just run the UI
-    if [[ -z "$cmd" ]]; then
-        if [[ -f "./pharo-ui" ]]; then
-            chmod +x ./pharo-ui 2>/dev/null || true
-            log_info "Launching Pharo from: $pharo_dir"
-            ./pharo-ui &
-        elif [[ -f "./Pharo.app/Contents/MacOS/Pharo" ]]; then
-            open ./Pharo.app
-        elif [[ -f "./pharo" ]]; then
-            chmod +x ./pharo 2>/dev/null || true
-            ./pharo --interactive &
-        else
-            die "Cannot find Pharo executable"
-        fi
-        return
+    # Launch the Pharo UI
+    if [[ -f "./pharo-ui" ]]; then
+        chmod +x ./pharo-ui 2>/dev/null || true
+        log_info "Launching Pharo from: $pharo_dir"
+        ./pharo-ui &
+    elif [[ -f "./Pharo.app/Contents/MacOS/Pharo" ]]; then
+        open ./Pharo.app
+    elif [[ -f "./pharo" ]]; then
+        chmod +x ./pharo 2>/dev/null || true
+        ./pharo --interactive &
+    else
+        die "Cannot find Pharo executable"
     fi
-
-    # Handle Clap commands
-    case "$cmd" in
-        metacello)
-            shift
-            local spec="$*"
-            if [[ -z "$spec" ]]; then
-                log_error "Usage: st pharo run metacello <baseline-spec>"
-                return 1
-            fi
-            ./pharo --headless Pharo.image metacello install "$spec" --save
-            ;;
-        st)
-            local st_file="${1:-}"
-            if [[ -z "$st_file" ]]; then
-                log_error "Usage: st pharo run st <file.st>"
-                return 1
-            fi
-            ./pharo --headless Pharo.image load "$st_file"
-            ;;
-        save)
-            local save_name="${1:-}"
-            if [[ -z "$save_name" ]]; then
-                ./pharo --headless Pharo.image save
-            else
-                ./pharo --headless Pharo.image save "$save_name"
-            fi
-            ;;
-        printVersion)
-            ./pharo --headless Pharo.image printVersion
-            ;;
-        eval)
-            shift
-            local code="$*"
-            if [[ -z "$code" ]]; then
-                log_error "Usage: st pharo run eval <code>"
-                return 1
-            fi
-            ./pharo --headless Pharo.image eval "$code"
-            ;;
-        fuel)
-            local fuel_file="${1:-}"
-            if [[ -z "$fuel_file" ]]; then
-                log_error "Usage: st pharo run fuel <file.fuel>"
-                return 1
-            fi
-            ./pharo --headless Pharo.image fuel load "$fuel_file"
-            ;;
-        help|--help|-h)
-            smalltalk_pharo_help
-            ;;
-        *)
-            log_error "Unknown command: $cmd"
-            echo "Run 'st pharo help' for available commands"
-            return 1
-            ;;
-    esac
 }
 
 smalltalk_pharo_search() {
@@ -714,7 +653,7 @@ smalltalk_pharo_clean_artifacts() {
 }
 
 smalltalk_pharo_eval() {
-    local code="${1:-}"
+    local code="$*"
     
     if [[ -z "$code" ]]; then
         log_error "Please provide code to evaluate"
@@ -723,16 +662,132 @@ smalltalk_pharo_eval() {
     fi
     
     local pharo_dir
-    pharo_dir=$(is_pharo_installed) || {
+    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
+    
+    if [[ -z "$pharo_dir" ]]; then
         log_error "Pharo is not installed"
         log_error "Run 'st pharo install' first"
         return 1
-    }
+    fi
     
     cd "$pharo_dir" || return 1
     
     if [[ -f "./pharo" ]]; then
         ./pharo --headless Pharo.image eval "$code"
+    else
+        log_error "Pharo executable not found in: $pharo_dir"
+        return 1
+    fi
+}
+
+# Load a Metacello baseline/configuration
+smalltalk_pharo_metacello() {
+    local spec="$*"
+    
+    if [[ -z "$spec" ]]; then
+        log_error "Please provide a Metacello baseline specification"
+        echo "Usage: st pharo metacello <baseline-spec>"
+        return 1
+    fi
+    
+    local pharo_dir
+    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
+    
+    if [[ -z "$pharo_dir" ]]; then
+        log_error "Pharo is not installed"
+        log_error "Run 'st pharo install' first"
+        return 1
+    fi
+    
+    cd "$pharo_dir" || return 1
+    
+    if [[ -f "./pharo" ]]; then
+        ./pharo --headless Pharo.image metacello install "$spec" --save
+    else
+        log_error "Pharo executable not found in: $pharo_dir"
+        return 1
+    fi
+}
+
+# Load and execute a .st source file
+smalltalk_pharo_load() {
+    local st_file="${1:-}"
+    
+    if [[ -z "$st_file" ]]; then
+        log_error "Please provide a .st file to load"
+        echo "Usage: st pharo load <file.st>"
+        return 1
+    fi
+    
+    local pharo_dir
+    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
+    
+    if [[ -z "$pharo_dir" ]]; then
+        log_error "Pharo is not installed"
+        log_error "Run 'st pharo install' first"
+        return 1
+    fi
+    
+    cd "$pharo_dir" || return 1
+    
+    if [[ -f "./pharo" ]]; then
+        ./pharo --headless Pharo.image load "$st_file"
+    else
+        log_error "Pharo executable not found in: $pharo_dir"
+        return 1
+    fi
+}
+
+# Save the Pharo image
+smalltalk_pharo_save() {
+    local save_name="${1:-}"
+    
+    local pharo_dir
+    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
+    
+    if [[ -z "$pharo_dir" ]]; then
+        log_error "Pharo is not installed"
+        log_error "Run 'st pharo install' first"
+        return 1
+    fi
+    
+    cd "$pharo_dir" || return 1
+    
+    if [[ -f "./pharo" ]]; then
+        if [[ -z "$save_name" ]]; then
+            ./pharo --headless Pharo.image save
+        else
+            ./pharo --headless Pharo.image save "$save_name"
+        fi
+    else
+        log_error "Pharo executable not found in: $pharo_dir"
+        return 1
+    fi
+}
+
+# Load a Fuel serialization file
+smalltalk_pharo_fuel() {
+    local fuel_file="${1:-}"
+    
+    if [[ -z "$fuel_file" ]]; then
+        log_error "Please provide a Fuel file to load"
+        echo "Usage: st pharo fuel <file.fuel>"
+        return 1
+    fi
+    
+    local pharo_dir
+    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
+    
+    if [[ -z "$pharo_dir" ]]; then
+        log_error "Pharo is not installed"
+        log_error "Run 'st pharo install' first"
+        return 1
+    fi
+    
+    cd "$pharo_dir" || return 1
+    
+    if [[ -f "./pharo" ]]; then
+        ./pharo --headless Pharo.image fuel load "$fuel_file"
     else
         log_error "Pharo executable not found in: $pharo_dir"
         return 1

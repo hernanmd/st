@@ -11,13 +11,13 @@ st [-x] gnu <command>
 | Command | Description |
 |---------|-------------|
 | `install [--source]` | Install GNU Smalltalk (use --source for building from source) |
-| `run [file]` |
-| `eval <code>` | Evaluate Smalltalk code (headless) | Run GNU Smalltalk (or a specific file) |
+| `run [file]` | Start the REPL (or run a specific file) |
+| `eval '<code>'` | Evaluate Smalltalk code (headless) |
 | `search <term>` | Search for packages |
 | `list` | List available packages |
 | `update` | Update package information |
 | `clean` | Clean cache directory |
-| `clean_artifacts` | Clean installed artifacts |
+| `clean-artifacts` | Clean installed artifacts |
 | `version` | Show GNU Smalltalk version |
 | `help` | Show this help message |
 
@@ -38,11 +38,11 @@ Example: `st -x gnu install`
 st gnu install            # Install via package manager
 st gnu install --source   # Build from source
 st -x gnu install         # Install with debug output
-st -v pharo install           # Install with verbose output
+st -v gnu install         # Install with verbose output
 st gnu run                # Start REPL
 st gnu run script.st      # Run a .st file
 st gnu run -i script.st   # Run script and exit
-st gnu eval '42 factorial'
+st gnu eval '42 factorial' # Evaluate code headlessly
 ```
 
 ## About GNU Smalltalk

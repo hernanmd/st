@@ -4,7 +4,7 @@
 # Usage: smalltalk [--debug] <implementation> <command> [options]
 #
 # Implementations: pharo, cuis, gt, squeak, gnu, lst, ls4
-# Commands: install, run, search, list, update, clean, clean-artifacts, help
+# Commands: install, run, eval, search, list, update, clean, clean-artifacts, help
 #
 set -u
 set -o pipefail
@@ -55,12 +55,15 @@ print_usage() {
         $'  squeak      Squeak Smalltalk (https://squeak.org)' \
         $'  gnu         GNU Smalltalk (https://gnu.org/software/smalltalk)' \
         $'  lst         Little Smalltalk (https://codeberg.org/suetanvil/lst3r)' \
-        $'  ls4        Little Smalltalk v4 (https://github.com/kyle-github/littlesmalltalk)' \
+        $'  ls4         Little Smalltalk v4 (https://github.com/kyle-github/littlesmalltalk)' \
         '' \
         $'\033[1mCOMMANDS\033[0m' \
         $'  install          Install the Smalltalk implementation or a package' \
-        $'  run              Run the Smalltalk image/environment' \
+        $'  run              Launch the Smalltalk UI/environment' \
         $'  eval             Evaluate Smalltalk code (headless)' \
+        $'  load             Load and execute a .st source file' \
+        $'  save             Save the Smalltalk image' \
+        $'  metacello        Install a Metacello baseline/configuration' \
         $'  search           Search for packages' \
         $'  list             List available packages' \
         $'  update           Update package cache' \
@@ -69,21 +72,22 @@ print_usage() {
         $'  help             Show help for a specific implementation or command' \
         '' \
         $'\033[1mEXAMPLES\033[0m' \
-        $'  st pharo install                    # Install Pharo to Pharo-13_YYYYMMDD_HHMMSS' \
+        $'  st pharo install                    # Install Pharo' \
         $'  st pharo install SomePackage        # Install a Pharo package' \
         $'  st pharo install -d ~/my-pharo      # Install to specific directory' \
-        $'  st pharo install SomePkg -d ~/dir   # Install package to directory' \
         $'  st -x pharo install                 # Install with debug output' \
         $'  st -q pharo install                 # Install with no output' \
-        $'  st pharo run                        # Run Pharo' \
+        $'  st pharo run                        # Launch Pharo UI' \
         $'  st pharo eval \'1+2\'                # Evaluate Smalltalk code' \
-        $'  st gt install                       # Install Glamorous Toolkit to GlamorousToolkit_YYYYMMDD_HHMMSS' \
+        $'  st pharo load script.st             # Load a .st file' \
+        $'  st pharo metacello \'BaselineOf...\'  # Load Metacello baseline' \
+        $'  st pharo save myimage               # Save the image' \
+        $'  st gt install                       # Install Glamorous Toolkit' \
         $'  st gt eval \'42 inspect\'            # Evaluate in GT' \
-        $'  st gt run metacello \'BaselineOfPha...\'' \
-        $'  st squeak install                   # Install Squeak to Squeak-6.0_YYYYMMDD_HHMMSS' \
+        $'  st squeak install                   # Install Squeak' \
         $'  st -v squeak install                # Install with verbose output' \
         $'  st clean-artifacts                  # Clean all artifacts' \
-        $'  st clean-artifacts pharo           # Clean Pharo artifacts only' \
+        $'  st clean-artifacts pharo            # Clean Pharo artifacts only' \
         '' \
         "For more information about a specific implementation:" \
         $'  st pharo help' \
@@ -157,17 +161,15 @@ main() {
     # Source the implementation-specific script
     source "${LIBEXEC_DIR}/smalltalk-${impl}.sh"
 
-    # Execute the command
-    case "$cmd" in
-        install|run|search|list|update|clean|clean_artifacts|help|version|eval|versions)
-            "smalltalk_${impl}_${cmd}" "${@:3}"
-            ;;
-        *)
-            echo "Error: Unknown command '$cmd' for implementation '$impl'" >&2
-            echo "Run 'st $impl help' for available commands." >&2
-            exit 1
-            ;;
-    esac
+    # Execute the command via dynamic dispatch
+    local func_name="smalltalk_${impl}_${cmd}"
+    if declare -f "$func_name" >/dev/null 2>&1; then
+        "$func_name" "${@:3}"
+    else
+        echo "Error: Command '$cmd' is not supported by '$impl'" >&2
+        echo "Run 'st $impl help' for available commands." >&2
+        exit 1
+    fi
 }
 
 main "$@"

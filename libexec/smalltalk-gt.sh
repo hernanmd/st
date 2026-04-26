@@ -227,7 +227,6 @@ smalltalk_gt_install() {
 
 smalltalk_gt_run() {
     local target_dir=""
-    local cmd=""
     
     # Parse options
     while [[ $# -gt 0 ]]; do
@@ -237,9 +236,7 @@ smalltalk_gt_run() {
                 shift 2
                 ;;
             *)
-                cmd="$1"
                 shift
-                break
                 ;;
         esac
     done
@@ -257,102 +254,18 @@ smalltalk_gt_run() {
             timestamp=$(date +%Y%m%d_%H%M%S)
             gt_dir="GlamorousToolkit_${timestamp}"
             log_info "Creating directory: $gt_dir"
-            # download_gt changes to the install directory and updates install_dir
-            download_gt "$GT_VERSION" "$gt_dir"
-            # Get the actual path after download
-            gt_dir="$(pwd)/GlamorousToolkit_${timestamp}"
+            mkdir -p "$gt_dir"
+            cd "$gt_dir" || die "Cannot create directory: $gt_dir"
+            download_gt "$GT_VERSION" "."
+            gt_dir="$(pwd)"
+            log_success "GT installed to: $gt_dir"
         }
     fi
     
     cd "$gt_dir" || die "Cannot change to GT directory: $gt_dir"
 
-    # If no command, just run the UI
-    if [[ -z "$cmd" ]]; then
-        run_gt
-        return
-    fi
-
-    # Handle Clap commands - GT uses Pharo-based image
-    local gt_image="${gt_dir}/GlamorousToolkit.image"
-    local gt_executable="${gt_dir}/GlamorousToolkit"
-
-    # Fallback to pharo executable if GT executable doesn't exist
-    if [[ -f "${gt_dir}/pharo" ]]; then
-        gt_executable="${gt_dir}/pharo"
-    fi
-
-    case "$cmd" in
-        metacello)
-            shift
-            local spec="$*"
-            if [[ -z "$spec" ]]; then
-                log_error "Usage: st gt run metacello <baseline-spec>"
-                return 1
-            fi
-            if [[ -f "$gt_executable" ]]; then
-                "$gt_executable" --headless "$gt_image" metacello install "$spec" --save
-            else
-                log_error "GT executable not found"
-                return 1
-            fi
-            ;;
-        st)
-            local st_file="${1:-}"
-            if [[ -z "$st_file" ]]; then
-                log_error "Usage: st gt run st <file.st>"
-                return 1
-            fi
-            if [[ -f "$gt_executable" ]]; then
-                "$gt_executable" --headless "$gt_image" load "$st_file"
-            else
-                log_error "GT executable not found"
-                return 1
-            fi
-            ;;
-        save)
-            local save_name="${1:-}"
-            if [[ -f "$gt_executable" ]]; then
-                if [[ -z "$save_name" ]]; then
-                    "$gt_executable" --headless "$gt_image" save
-                else
-                    "$gt_executable" --headless "$gt_image" save "$save_name"
-                fi
-            else
-                log_error "GT executable not found"
-                return 1
-            fi
-            ;;
-        printVersion)
-            if [[ -f "$gt_executable" ]]; then
-                "$gt_executable" --headless "$gt_image" printVersion
-            else
-                log_error "GT executable not found"
-                return 1
-            fi
-            ;;
-        eval)
-            shift
-            local code="$*"
-            if [[ -z "$code" ]]; then
-                log_error "Usage: st gt run eval <code>"
-                return 1
-            fi
-            if [[ -f "$gt_executable" ]]; then
-                "$gt_executable" --headless "$gt_image" eval "$code"
-            else
-                log_error "GT executable not found"
-                return 1
-            fi
-            ;;
-        help|--help|-h)
-            smalltalk_gt_help
-            ;;
-        *)
-            log_error "Unknown command: $cmd"
-            echo "Run 'st gt help' for available commands"
-            return 1
-            ;;
-    esac
+    # Launch the GT UI
+    run_gt
 }
 
 smalltalk_gt_search() {
@@ -481,7 +394,7 @@ smalltalk_gt_version() {
 }
 
 smalltalk_gt_eval() {
-    local code="${1:-}"
+    local code="$*"
     
     if [[ -z "$code" ]]; then
         log_error "Please provide code to evaluate"
@@ -510,6 +423,106 @@ smalltalk_gt_eval() {
         "$gt_executable" --headless "$gt_image" eval "$code"
     else
         log_error "GT executable not found in: $gt_dir"
+        return 1
+    fi
+}
+
+# Load a Metacello baseline/configuration
+smalltalk_gt_metacello() {
+    local spec="$*"
+    
+    if [[ -z "$spec" ]]; then
+        log_error "Please provide a Metacello baseline specification"
+        echo "Usage: st gt metacello <baseline-spec>"
+        return 1
+    fi
+    
+    local gt_dir
+    gt_dir=$(is_gt_installed) || {
+        log_error "Glamorous Toolkit is not installed"
+        log_error "Run 'st gt install' first"
+        return 1
+    }
+    
+    cd "$gt_dir" || return 1
+    
+    local gt_image="${gt_dir}/GlamorousToolkit.image"
+    local gt_executable="${gt_dir}/GlamorousToolkit"
+    
+    if [[ -f "${gt_dir}/pharo" ]]; then
+        gt_executable="${gt_dir}/pharo"
+    fi
+    
+    if [[ -f "$gt_executable" ]]; then
+        "$gt_executable" --headless "$gt_image" metacello install "$spec" --save
+    else
+        log_error "GT executable not found"
+        return 1
+    fi
+}
+
+# Load and execute a .st source file
+smalltalk_gt_load() {
+    local st_file="${1:-}"
+    
+    if [[ -z "$st_file" ]]; then
+        log_error "Please provide a .st file to load"
+        echo "Usage: st gt load <file.st>"
+        return 1
+    fi
+    
+    local gt_dir
+    gt_dir=$(is_gt_installed) || {
+        log_error "Glamorous Toolkit is not installed"
+        log_error "Run 'st gt install' first"
+        return 1
+    }
+    
+    cd "$gt_dir" || return 1
+    
+    local gt_image="${gt_dir}/GlamorousToolkit.image"
+    local gt_executable="${gt_dir}/GlamorousToolkit"
+    
+    if [[ -f "${gt_dir}/pharo" ]]; then
+        gt_executable="${gt_dir}/pharo"
+    fi
+    
+    if [[ -f "$gt_executable" ]]; then
+        "$gt_executable" --headless "$gt_image" load "$st_file"
+    else
+        log_error "GT executable not found"
+        return 1
+    fi
+}
+
+# Save the GT image
+smalltalk_gt_save() {
+    local save_name="${1:-}"
+    
+    local gt_dir
+    gt_dir=$(is_gt_installed) || {
+        log_error "Glamorous Toolkit is not installed"
+        log_error "Run 'st gt install' first"
+        return 1
+    }
+    
+    cd "$gt_dir" || return 1
+    
+    local gt_image="${gt_dir}/GlamorousToolkit.image"
+    local gt_executable="${gt_dir}/GlamorousToolkit"
+    
+    if [[ -f "${gt_dir}/pharo" ]]; then
+        gt_executable="${gt_dir}/pharo"
+    fi
+    
+    if [[ -f "$gt_executable" ]]; then
+        if [[ -z "$save_name" ]]; then
+            "$gt_executable" --headless "$gt_image" save
+        else
+            "$gt_executable" --headless "$gt_image" save "$save_name"
+        fi
+    else
+        log_error "GT executable not found"
         return 1
     fi
 }

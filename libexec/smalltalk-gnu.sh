@@ -285,7 +285,7 @@ smalltalk_gnu_version() {
 }
 
 smalltalk_gnu_eval() {
-    local code="${1:-}"
+    local code="$*"
     
     if [[ -z "$code" ]]; then
         log_error "Please provide code to evaluate"

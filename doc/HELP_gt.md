@@ -11,7 +11,11 @@ st [-x] gt <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install [-d dir]` | Install Glamorous Toolkit to the specified directory |
-| `run [cmd] [-d dir]` | Run GT (with optional Clap commands) |
+| `run [-d dir]` | Launch the GT UI |
+| `eval '<code>'` | Evaluate Smalltalk code (headless) |
+| `load <file.st>` | Load and execute a .st source file |
+| `save [name]` | Save the GT image |
+| `metacello <spec>` | Install a Metacello baseline/configuration |
 | `search <term>` | Search for packages |
 | `list` | List available packages |
 | `update` | Update package information |
@@ -32,30 +36,20 @@ Must be specified before implementation name.
 
 Example: `st -x gt install`
 
-## Clap Commands
-
-Run as: `st gt run <cmd>`
-
-| Command | Description |
-|---------|-------------|
-| `metacello <spec>` | Install Metacello baseline/configuration |
-| `st <file.st>` | Load and execute .st source file |
-| `save [name]` | Save the image |
-| `printVersion` | Print version |
-| `eval <code>` | Evaluate Smalltalk code |
-
 ## Examples
 
 ```bash
-st gt install           # Install GT to current directory
-st gt install -d ~/gt   # Install GT to ~/gt
-st -x gt install        # Install with debug output
-st -v pharo install           # Install with verbose output
-st gt run               # Run GT (creates timestamped dir if needed)
-st gt run -d ~/gt       # Run GT from ~/gt directory
-st gt run metacello 'BaselineOfPha...'
-st gt eval '1+2'
-st gt eval '42 inspect'
+st gt install              # Install GT
+st gt install -d ~/gt      # Install GT to ~/gt
+st -x gt install           # Install with debug output
+st -v gt install           # Install with verbose output
+st gt run                  # Launch the GT UI
+st gt run -d ~/gt          # Launch GT from ~/gt directory
+st gt eval '1+2'           # Evaluate Smalltalk code
+st gt eval '42 inspect'    # Evaluate and inspect result
+st gt load script.st       # Load a .st file
+st gt metacello 'BaselineOf...' # Load Metacello baseline
+st gt save myimage         # Save the GT image
 ```
 
 ## About Glamorous Toolkit

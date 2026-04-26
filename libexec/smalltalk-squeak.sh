@@ -756,26 +756,7 @@ smalltalk_squeak_install() {
 }
 
 smalltalk_squeak_run() {
-    local cmd="${1:-}"
-
-    # If no command, just run the UI
-    if [[ -z "$cmd" ]]; then
-        run_squeak
-        return
-    fi
-
-    # Squeak has limited command-line interface
-    case "$cmd" in
-        help|--help|-h)
-            smalltalk_squeak_help
-            ;;
-        *)
-            log_error "Squeak does not support command-line execution of scripts"
-            log_info "Run 'st squeak run' to launch the Squeak UI"
-            log_info "For script execution, use the Squeak UI or Pharo/GNU Smalltalk"
-            return 1
-            ;;
-    esac
+    run_squeak
 }
 
 smalltalk_squeak_search() {

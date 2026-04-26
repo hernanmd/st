@@ -205,6 +205,7 @@ smalltalk_lst_run() {
     # If target directory specified, use it; otherwise search for existing LST
     if [[ -n "$target_dir" ]]; then
         lst_dir="$target_dir"
+        cd "$lst_dir" || die "Cannot change to LST directory: $lst_dir"
     else
         lst_dir=$(is_lst_installed) || {
             log_info "LST not found, installing..."
@@ -213,12 +214,18 @@ smalltalk_lst_run() {
             timestamp=$(date +%Y%m%d_%H%M%S)
             lst_dir="lst3r_${timestamp}"
             log_info "Creating directory: $lst_dir"
-            download_lst "$lst_dir"
-            lst_dir="$(pwd)/lst3r_${timestamp}"
+            mkdir -p "$lst_dir"
+            cd "$lst_dir" || die "Cannot create directory: $lst_dir"
+            download_lst "."
+            lst_dir="$(pwd)"
+            log_success "LST installed to: $lst_dir"
         }
     fi
 
-    cd "$lst_dir" || die "Cannot change to LST directory: $lst_dir"
+    # Ensure we are in the LST directory
+    if [[ "$lst_dir" != "$(pwd)" ]]; then
+        cd "$lst_dir" || die "Cannot change to LST directory: $lst_dir"
+    fi
 
     run_lst $extra_args
 }

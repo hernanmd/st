@@ -11,13 +11,13 @@ st [-x] cuis <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install [ver] [-d dir]` | Install Cuis (default: stable, options: stable, 7.0, 6.0) |
-| `run` |
-| `eval <code>` | Evaluate Smalltalk code (headless) | Run Cuis |
+| `run` | Launch Cuis |
+| `eval '<code>'` | Evaluate Smalltalk code (headless) |
 | `search <term>` | Search for packages |
 | `list` | List available packages |
 | `update` | Update package information |
 | `clean` | Clean cache directory |
-| `clean_artifacts` | Clean installed artifacts |
+| `clean-artifacts` | Clean installed artifacts |
 | `version` | Show Cuis version |
 | `help` | Show this help message |
 
@@ -48,9 +48,9 @@ st cuis install 7.0               # Install Cuis 7.0
 st cuis install -d ~/cuis         # Install to specific directory
 st cuis install 7.0 -d ~/cuis70   # Install specific version to directory
 st -x cuis install                # Install with debug output
-st -v pharo install           # Install with verbose output
-st cuis run                       # Run Cuis
-st cuis eval '1 + 2'
+st -v cuis install                # Install with verbose output
+st cuis run                       # Launch Cuis
+st cuis eval '1 + 2'             # Evaluate Smalltalk code
 st cuis version                   # Show installed version
 ```
 

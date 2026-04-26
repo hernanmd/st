@@ -11,13 +11,12 @@ st [-x] squeak <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install [ver] [-d dir]` | Install Squeak (options: stable, 6.1, 6.0, 5.3) |
-| `run` |
-| `eval <code>` | Evaluate Smalltalk code (headless) | Run Squeak |
+| `run` | Launch Squeak |
 | `search <term>` | Search for packages |
 | `list` | List available packages |
 | `update` | Update package information |
 | `clean` | Clean cache directory |
-| `clean_artifacts` | Clean installed artifacts |
+| `clean-artifacts` | Clean installed artifacts |
 | `version` | Show Squeak version |
 | `help` | Show this help message |
 
@@ -54,16 +53,16 @@ st squeak install                    # Install latest stable Squeak
 st squeak install 6.0                # Install Squeak 6.0
 st squeak install -d ~/squeak        # Install to specific directory
 st -x squeak install                 # Install with debug output
-st -v pharo install           # Install with verbose output
-st squeak run                        # Run Squeak
-st squeak eval '1 + 2'
+st -v squeak install                 # Install with verbose output
+st squeak run                        # Launch Squeak
 st squeak version                    # Show installed version
 ```
 
 ## Notes
 
-- Squeak uses All-in-One zip format with bundled VM
-- Works on macOS (Intel and Apple Silicon), Linux, and Windows
+- Squeak requires a GUI environment to run
+- Headless code evaluation (`eval`) is not supported
+- For headless evaluation, consider using Pharo or GNU Smalltalk
 - Package management via Monticello (search runs GitHub queries)
 
 ## About Squeak

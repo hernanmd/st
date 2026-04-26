@@ -11,7 +11,12 @@ st [-x] pharo <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install [-d dir] [packages...]` | Install Pharo with optional packages |
-| `run [cmd]` | Run Pharo (with optional Clap commands) |
+| `run` | Launch the Pharo UI |
+| `eval '<code>'` | Evaluate Smalltalk code (headless) |
+| `load <file.st>` | Load and execute a .st source file |
+| `save [name]` | Save the Pharo image |
+| `metacello <spec>` | Install a Metacello baseline/configuration |
+| `fuel <file.fuel>` | Load a Fuel serialization file |
 | `search <term>` | Search for packages |
 | `list` | List available packages (cached) |
 | `update` | Update package cache |
@@ -39,19 +44,6 @@ Multiple packages can be specified after the install command:
 st pharo install Seaside NeoCSV
 ```
 
-## Clap Commands
-
-Run as: `st pharo run <cmd>`
-
-| Command | Description |
-|---------|-------------|
-| `metacello <spec>` | Install Metacello baseline/configuration |
-| `st <file.st>` | Load and execute .st source file |
-| `save [name]` | Save the image |
-| `printVersion` | Print image version |
-| `eval <code>` | Evaluate Smalltalk code |
-| `fuel <file.fuel>` | Load fuel file |
-
 ## Examples
 
 ```bash
@@ -61,8 +53,13 @@ st pharo install Seaside          # Install Pharo with Seaside package
 st pharo install Seaside NeoCSV   # Install with multiple packages
 st pharo install -d ~/p Seaside   # Install to directory with package
 st -x pharo install               # Install with debug output
-st -v pharo install           # Install with verbose output
-st pharo run                      # Run Pharo
+st -v pharo install               # Install with verbose output
+st pharo run                      # Launch the Pharo UI
+st pharo eval '1+2'               # Evaluate Smalltalk code
+st pharo load script.st           # Load a .st file
+st pharo metacello 'BaselineOf...' # Load Metacello baseline
+st pharo save myimage             # Save the image
+st pharo fuel data.fuel           # Load a Fuel file
 st pharo search polyglot          # Search for packages
 st pharo clean-artifacts          # Clean installed files
 ```

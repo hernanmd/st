@@ -11,8 +11,8 @@ st [-x] ls4 <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install [-d dir]` | Install LS4 (downloads and builds from source) |
-| `run [args] [-d dir]` | Run LS4 Web IDE |
-| `eval [args] [-d dir]` | Run LS4 REPL evaluator |
+| `run [-d dir]` | Launch the LS4 Web IDE (requires graphical display) |
+| `eval [-d dir]` | Run the LS4 REPL evaluator (headless) |
 | `versions` | List available versions from GitHub releases |
 | `version` | Show LS4 version |
 | `clean-artifacts` | Clean build artifacts |
@@ -25,9 +25,9 @@ st [-x] ls4 <command> [options]
 ## Notes
 
 - LS4 must be built from source (uses CMake)
-- LS4 has no package manager (no search, list, update, install commands return errors)
+- LS4 has no package manager (search, list, update return errors)
 - The `run` command starts the Web IDE (requires a graphical display)
-- The `eval` command starts the REPL evaluator
+- The `eval` command starts the REPL evaluator (headless)
 
 ## Debug Mode
 
@@ -43,8 +43,8 @@ st ls4 install                # Download, build and install LS4
 st ls4 install -d ~/ls4       # Install to specific directory
 st -x ls4 install             # Install with debug output
 st -v ls4 install             # Install with verbose output
-st ls4 run                    # Run LS4 Web IDE
-st ls4 run -d ~/ls4           # Run Web IDE from specific directory
+st ls4 run                    # Launch LS4 Web IDE
+st ls4 run -d ~/ls4           # Launch Web IDE from specific directory
 st ls4 eval                   # Run LS4 REPL evaluator
 st ls4 eval -d ~/ls4          # Run REPL from specific directory
 st ls4 versions               # List available versions
