@@ -285,22 +285,9 @@ smalltalk_gnu_version() {
 }
 
 smalltalk_gnu_eval() {
-    local code="$*"
-    
-    if [[ -z "$code" ]]; then
-        log_error "Please provide code to evaluate"
-        echo "Usage: st gnu eval '<code>'"
-        return 1
-    fi
-    
-    if ! is_gnustack_installed; then
-        log_error "GNU Smalltalk is not installed"
-        log_error "Run 'st gnu install' first"
-        return 1
-    fi
-    
-    # Unalias gst if it's an alias (Zsh omz git plugin)
-    unescape_gst_alias
-    
-    echo "$code" | gst --quiet
+    log_error "GNU Smalltalk does not support command-line code evaluation"
+    log_info "Use 'st gnu run' to start the REPL"
+    log_info "Or write code to a file and use 'st gnu run script.st'"
+    log_info "For headless evaluation, consider using Pharo or Cuis"
+    return 1
 }

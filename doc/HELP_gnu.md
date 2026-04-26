@@ -12,7 +12,6 @@ st [-x] gnu <command>
 |---------|-------------|
 | `install [--source]` | Install GNU Smalltalk (use --source for building from source) |
 | `run [file]` | Start the REPL (or run a specific file) |
-| `eval '<code>'` | Evaluate Smalltalk code (headless) |
 | `search <term>` | Search for packages |
 | `list` | List available packages |
 | `update` | Update package information |
@@ -42,8 +41,13 @@ st -v gnu install         # Install with verbose output
 st gnu run                # Start REPL
 st gnu run script.st      # Run a .st file
 st gnu run -i script.st   # Run script and exit
-st gnu eval '42 factorial' # Evaluate code headlessly
 ```
+
+## Notes
+
+- GNU Smalltalk does not support command-line code evaluation (`eval`)
+- Load code by writing it to a file and running `st gnu run script.st`
+- For headless code evaluation, consider using Pharo or Cuis
 
 ## About GNU Smalltalk
 

@@ -682,11 +682,9 @@ smalltalk_pharo_eval() {
 
 # Load a Metacello baseline/configuration
 smalltalk_pharo_metacello() {
-    local spec="$*"
-    
-    if [[ -z "$spec" ]]; then
+    if [[ $# -eq 0 ]]; then
         log_error "Please provide a Metacello baseline specification"
-        echo "Usage: st pharo metacello <baseline-spec>"
+        echo "Usage: st pharo metacello <repo-url> <baseline-name>"
         return 1
     fi
     
@@ -702,7 +700,7 @@ smalltalk_pharo_metacello() {
     cd "$pharo_dir" || return 1
     
     if [[ -f "./pharo" ]]; then
-        ./pharo --headless Pharo.image metacello install "$spec" --save
+        ./pharo --headless Pharo.image metacello "$@" --save
     else
         log_error "Pharo executable not found in: $pharo_dir"
         return 1

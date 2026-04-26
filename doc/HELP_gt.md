@@ -48,7 +48,7 @@ st gt run -d ~/gt          # Launch GT from ~/gt directory
 st gt eval '1+2'           # Evaluate Smalltalk code
 st gt eval '42 inspect'    # Evaluate and inspect result
 st gt load script.st       # Load a .st file
-st gt metacello 'BaselineOf...' # Load Metacello baseline
+st gt metacello github://hernanmd/ISO3166/repository ISO3166 # Load Metacello baseline
 st gt save myimage         # Save the GT image
 ```
 

@@ -429,11 +429,9 @@ smalltalk_gt_eval() {
 
 # Load a Metacello baseline/configuration
 smalltalk_gt_metacello() {
-    local spec="$*"
-    
-    if [[ -z "$spec" ]]; then
+    if [[ $# -eq 0 ]]; then
         log_error "Please provide a Metacello baseline specification"
-        echo "Usage: st gt metacello <baseline-spec>"
+        echo "Usage: st gt metacello <repo-url> <baseline-name>"
         return 1
     fi
     
@@ -454,7 +452,7 @@ smalltalk_gt_metacello() {
     fi
     
     if [[ -f "$gt_executable" ]]; then
-        "$gt_executable" --headless "$gt_image" metacello install "$spec" --save
+        "$gt_executable" --headless "$gt_image" metacello "$@" --save
     else
         log_error "GT executable not found"
         return 1
