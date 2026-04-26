@@ -41,6 +41,8 @@ is_lst_installed() {
 # Download and build LST from source archive
 download_lst() {
     local install_dir="${1:-.}"
+    local original_dir
+    original_dir="$(pwd)"
 
     log_info "Downloading Little Smalltalk v3 to ${install_dir}..."
 
@@ -55,6 +57,7 @@ download_lst() {
     download_file "$LST_URL" "$archive_name"
 
     if [[ ! -f "$archive_name" ]]; then
+        cd "$original_dir"
         die "Failed to download Little Smalltalk v3"
     fi
 
@@ -74,6 +77,7 @@ download_lst() {
     done
 
     if [[ -z "$extracted_dir" ]]; then
+        cd "$original_dir"
         die "Failed to find extracted LST directory"
     fi
 
@@ -86,22 +90,24 @@ download_lst() {
     # Build the  binary
     log_info "Building Little Smalltalk v3..."
     if [[ -f "Makefile" ]]; then
-        make -j"$(nproc 2>/dev/null || echo 4)" || die "Build failed"
+        make -j"$(nproc 2>/dev/null || echo 4)" || { cd "$original_dir"; die "Build failed"; }
     elif [[ -f "CMakeLists.txt" ]]; then
         mkdir -p build
-        cd build
-        cmake .. || die "CMake configuration failed"
-        make -j"$(nproc 2>/dev/null || echo 4)" || die "Build failed"
+        cd build || { cd "$original_dir"; die "Cannot create build directory"; }
+        cmake .. || { cd "$original_dir"; die "CMake configuration failed"; }
+        make -j"$(nproc 2>/dev/null || echo 4)" || { cd "$original_dir"; die "Build failed"; }
         cd ..
     else
+        cd "$original_dir"
         die "No build system found. Expected Makefile or CMakeLists.txt"
     fi
 
-    # Ensure lst3 is executable
-    if [[ -f "./${install_dir}/lst3" ]]; then
-        chmod +x ./"${install_dir}"/lst3
+    if [[ -f "./build/lst3" ]]; then
+        chmod +x ./build/lst3
+        cd "$original_dir"
         log_success "Little Smalltalk v3 installed successfully to ${install_dir}"
     else
+        cd "$original_dir"
         die "Build failed: lst3 binary not found"
     fi
 }

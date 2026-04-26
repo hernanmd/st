@@ -202,6 +202,8 @@ find_cuis_in_current_dir() {
 download_cuis() {
     local version="${1:-$CUIS_VERSION}"
     local install_dir="${2:-.}"
+    local original_dir
+    original_dir="$(pwd)"
 
     log_info "Downloading Cuis ${version} to ${install_dir}..."
 
@@ -223,6 +225,7 @@ download_cuis() {
     if ! download_file "$download_url" "${temp_dir}/${archive_name}"; then
         log_error "Failed to download Cuis ${version}"
         rm -rf "$temp_dir"
+        cd "$original_dir"
         return 1
     fi
 
@@ -236,6 +239,7 @@ download_cuis() {
     if [[ -z "$extracted_dir" || ! -d "$extracted_dir" ]]; then
         log_error "Failed to extract Cuis archive"
         rm -rf "$temp_dir"
+        cd "$original_dir"
         return 1
     fi
 
@@ -255,6 +259,7 @@ download_cuis() {
     shopt -u nullglob
 
     if $has_launcher; then
+        cd "$original_dir"
         log_success "Cuis ${version} installed successfully to ${install_dir}"
 
 
@@ -269,6 +274,7 @@ download_cuis() {
     else
         log_error "Contents of install directory:"
         ls -la .
+        cd "$original_dir"
         die "Cuis installation failed - launch scripts not found after extraction"
     fi
 }

@@ -307,6 +307,8 @@ find_squeak_in_current_dir() {
 download_squeak() {
     local version="${1:-$SQUEAK_VERSION}"
     local install_dir="${2:-.}"
+    local original_dir
+    original_dir="$(pwd)"
 
     log_info "Downloading Squeak ${version}..."
 
@@ -336,6 +338,7 @@ download_squeak() {
         log_error "The version may not be available, or the URL has changed."
         log_error "Try a different version or check https://files.squeak.org/"
         rm -rf "$temp_dir"
+        cd "$original_dir"
         return 1
     fi
 
@@ -343,6 +346,7 @@ download_squeak() {
     if [[ ! -f "${temp_dir}/${archive_name}" ]]; then
         log_error "Download file not found"
         rm -rf "$temp_dir"
+        cd "$original_dir"
         return 1
     fi
 
@@ -352,6 +356,7 @@ download_squeak() {
     if ! extract_archive "${temp_dir}/${archive_name}" "$temp_dir"; then
         log_error "Failed to extract archive"
         rm -rf "$temp_dir"
+        cd "$original_dir"
         return 1
     fi
 
@@ -478,9 +483,11 @@ download_squeak() {
         log_error "Squeak installation failed - no .app or image found after extraction"
         log_error "Contents of install directory:"
         ls -la .
+        cd "$original_dir"
         die "Please check the extracted files manually"
     fi
 
+    cd "$original_dir"
     log_success "Squeak ${version} installed successfully to ${install_dir}"
 
     # Register files

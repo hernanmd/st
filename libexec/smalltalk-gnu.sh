@@ -43,6 +43,8 @@ is_gnustack_installed() {
 # Install GNU Smalltalk from source or binary
 install_gnustack_from_source() {
     local install_dir="${1:-$HOME/gnu-smalltalk}"
+    local original_dir
+    original_dir="$(pwd)"
 
     log_info "Installing GNU Smalltalk from source..."
     log_info "This may take a while as it requires compilation."
@@ -74,6 +76,7 @@ install_gnustack_from_source() {
     download_file "$download_url" "$archive_name"
 
     if [[ ! -f "$archive_name" ]]; then
+        cd "$original_dir"
         die "Failed to download GNU Smalltalk"
     fi
 
@@ -82,19 +85,22 @@ install_gnustack_from_source() {
 
     local source_dir="smalltalk-${GNUSTACK_VERSION}"
     if [[ ! -d "$source_dir" ]]; then
+        cd "$original_dir"
         die "Failed to extract GNU Smalltalk source"
     fi
 
-    cd "$source_dir" || die "Cannot change to source directory"
+    cd "$source_dir" || { cd "$original_dir"; die "Cannot change to source directory"; }
 
     log_info "Configuring..."
-    ./configure --prefix="$install_dir" || die "Configuration failed"
+    ./configure --prefix="$install_dir" || { cd "$original_dir"; die "Configuration failed"; }
 
     log_info "Building (this may take a while)..."
-    make -j"$(nproc 2>/dev/null || echo 4)" || die "Build failed"
+    make -j"$(nproc 2>/dev/null || echo 4)" || { cd "$original_dir"; die "Build failed"; }
 
     log_info "Installing..."
-    make install || die "Installation failed"
+    make install || { cd "$original_dir"; die "Installation failed"; }
+
+    cd "$original_dir"
 
     # Add to PATH
     local bin_dir="$install_dir/bin"

@@ -55,14 +55,32 @@ list_ls4_versions() {
 
 # Check if LS4 is installed and working
 is_ls4_installed() {
-    local search_paths=(".")
+    # First check current directory
+    if [[ -f "./build/lst" ]] && [[ -x "./build/lst" ]]; then
+        echo "$(pwd)"
+        return 0
+    fi
 
-    for path in "${search_paths[@]}"; do
-        if [[ -f "${path}/build/lst" ]] && [[ -x "${path}/build/lst" ]]; then
-            echo "$(cd "$path" && pwd)"
+    # Search current directory for timestamped installations (littlesmalltalk_*)
+    local dir
+    for dir in littlesmalltalk_*; do
+        if [[ -d "$dir" ]] && [[ -f "${dir}/build/lst" ]] && [[ -x "${dir}/build/lst" ]]; then
+            echo "$(pwd)/$dir"
             return 0
         fi
     done
+
+    # Also search parent directory for timestamped installations
+    local parent_dir
+    parent_dir="$(cd .. && pwd)"
+    if [[ "$(pwd)" != "$parent_dir" ]]; then
+        for dir in "$parent_dir"/littlesmalltalk-*; do
+            if [[ -d "$dir" ]] && [[ -f "${dir}/build/lst" ]] && [[ -x "${dir}/build/lst" ]]; then
+                echo "$dir"
+                return 0
+            fi
+        done
+    fi
 
     # Check PATH
     if command -v lst &>/dev/null; then
@@ -76,6 +94,8 @@ is_ls4_installed() {
 # Download and build LS4 from source archive
 download_ls4() {
     local install_dir="${1:-.}"
+    local original_dir
+    original_dir="$(pwd)"
 
     # Get latest version dynamically
     local version
@@ -86,7 +106,7 @@ download_ls4() {
 
     # Ensure the directory exists
     mkdir -p "$install_dir"
-    cd "$install_dir" || die "Cannot change to directory: $install_dir"
+    cd "$install_dir" || { cd "$original_dir"; die "Cannot change to directory: $install_dir"; }
 
     install_dir="$(pwd)"
 
@@ -98,6 +118,7 @@ download_ls4() {
     download_file "$download_url" "$archive_name"
 
     if [[ ! -f "$archive_name" ]]; then
+        cd "$original_dir"
         die "Failed to download Little Smalltalk v4"
     fi
 
@@ -117,6 +138,7 @@ download_ls4() {
     done
 
     if [[ -z "$extracted_dir" ]]; then
+        cd "$original_dir"
         die "Failed to find extracted LS4 directory"
     fi
 
@@ -130,19 +152,22 @@ download_ls4() {
     log_info "Building Little Smalltalk v4..."
     if [[ -f "CMakeLists.txt" ]]; then
         mkdir -p build
-        cd build || die "Cannot create build directory"
-        cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. || die "CMake configuration failed"
-        make -j"$(nproc 2>/dev/null || echo 4)" || die "Build failed"
+        cd build || { cd "$original_dir"; die "Cannot create build directory"; }
+        cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. || { cd "$original_dir"; die "CMake configuration failed"; }
+        make -j"$(nproc 2>/dev/null || echo 4)" || { cd "$original_dir"; die "Build failed"; }
         cd ..
     else
+        cd "$original_dir"
         die "No CMakeLists.txt found. Expected build system not found."
     fi
 
     # Ensure lst is executable
     if [[ -f "./build/lst" ]]; then
         chmod +x ./build/lst
+        cd "$original_dir"
         log_success "Little Smalltalk v4 installed successfully to ${install_dir}"
     else
+        cd "$original_dir"
         die "Build failed: lst binary not found in build directory"
     fi
 }
@@ -241,6 +266,7 @@ smalltalk_ls4_run() {
     # If target directory specified, use it; otherwise search for existing LS4
     if [[ -n "$target_dir" ]]; then
         ls4_dir="$target_dir"
+        cd "$ls4_dir" || die "Cannot change to LS4 directory: $ls4_dir"
     else
         ls4_dir=$(is_ls4_installed) || {
             log_info "LS4 not found, installing..."
@@ -249,12 +275,25 @@ smalltalk_ls4_run() {
             timestamp=$(date +%Y%m%d_%H%M%S)
             ls4_dir="littlesmalltalk_${timestamp}"
             log_info "Creating directory: $ls4_dir"
-            download_ls4 "$ls4_dir"
-            ls4_dir="$(pwd)/littlesmalltalk_${timestamp}"
+            mkdir -p "$ls4_dir"
+            cd "$ls4_dir" || die "Cannot create directory: $ls4_dir"
+            download_ls4 "."
+            ls4_dir="$(pwd)"
+            log_success "LS4 installed to: $ls4_dir"
         }
     fi
 
-    cd "$ls4_dir" || die "Cannot change to LS4 directory: $ls4_dir"
+    # Ensure we are in the LS4 directory
+    if [[ "$ls4_dir" != "$(pwd)" ]]; then
+        cd "$ls4_dir" || die "Cannot change to LS4 directory: $ls4_dir"
+    fi
+
+    # Check if we have a display available
+    if [[ -z "${DISPLAY:-}" ]] && [[ "$(uname -s)" != "Darwin" ]]; then
+        log_error "The LS4 Web IDE requires a graphical display"
+        log_info "Use 'st ls4 eval' for headless REPL evaluation instead"
+        return 1
+    fi
 
     # Run the Web IDE
     if [[ -f "./build/lst" && -f "./bin/lst_webide.img" ]]; then
@@ -288,6 +327,7 @@ smalltalk_ls4_eval() {
     # If target directory specified, use it; otherwise search for existing LS4
     if [[ -n "$target_dir" ]]; then
         ls4_dir="$target_dir"
+        cd "$ls4_dir" || die "Cannot change to LS4 directory: $ls4_dir"
     else
         ls4_dir=$(is_ls4_installed) || {
             log_info "LS4 not found, installing..."
@@ -296,12 +336,18 @@ smalltalk_ls4_eval() {
             timestamp=$(date +%Y%m%d_%H%M%S)
             ls4_dir="littlesmalltalk_${timestamp}"
             log_info "Creating directory: $ls4_dir"
-            download_ls4 "$ls4_dir"
-            ls4_dir="$(pwd)/littlesmalltalk_${timestamp}"
+            mkdir -p "$ls4_dir"
+            cd "$ls4_dir" || die "Cannot create directory: $ls4_dir"
+            download_ls4 "."
+            ls4_dir="$(pwd)"
+            log_success "LS4 installed to: $ls4_dir"
         }
     fi
 
-    cd "$ls4_dir" || die "Cannot change to LS4 directory: $ls4_dir"
+    # Ensure we are in the LS4 directory
+    if [[ "$ls4_dir" != "$(pwd)" ]]; then
+        cd "$ls4_dir" || die "Cannot change to LS4 directory: $ls4_dir"
+    fi
 
     # Run the REPL evaluator
     if [[ -f "./build/lst" && -f "./bin/lst_repl.img" ]]; then
