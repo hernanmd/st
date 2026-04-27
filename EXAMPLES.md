@@ -396,7 +396,7 @@ cd ../squeak && st squeak run
 ```bash
 # Before reinstalling, clean old artifacts
 cd ~/smalltalk/pharo
-st clean_artifacts
+st pharo clean_artifacts
 
 # Then reinstall
 st pharo install

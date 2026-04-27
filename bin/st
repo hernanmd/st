@@ -45,6 +45,7 @@ print_usage() {
         $'  --debug, -x         Enable debug mode (set -x tracing)' \
         $'  --quiet, -q         Suppress all output (no colors, no INFO/WARN/SUCCESS/ERROR messages)' \
         $'  --verbose, -v       Show detailed output (file listings during extraction)' \
+        $'  --list, -l          List available Smalltalk implementations' \
         $'  --version           Show version information' \
         $'  --help, -h          Show this help message' \
         '' \
@@ -86,13 +87,22 @@ print_usage() {
         $'  st gt eval \'42 inspect\'            # Evaluate in GT' \
         $'  st squeak install                   # Install Squeak' \
         $'  st -v squeak install                # Install with verbose output' \
-        $'  st clean-artifacts                  # Clean all artifacts' \
-        $'  st clean-artifacts pharo            # Clean Pharo artifacts only' \
         '' \
         "For more information about a specific implementation:" \
         $'  st pharo help' \
         $'  st gt help' \
         $'  st cuis help'
+}
+
+# Print available implementations
+print_implementations() {
+    printf '%-12s %s\n' "pharo"  "Modern, full-featured Smalltalk environment"
+    printf '%-12s %s\n' "cuis"   "Compact, portable Smalltalk distribution"
+    printf '%-12s %s\n' "gt"     "Multi-language moldable development environment"
+    printf '%-12s %s\n' "squeak" "Classic open-source Smalltalk platform"
+    printf '%-12s %s\n' "gnu"    "Traditional Smalltalk-80 command-line interpreter"
+    printf '%-12s %s\n' "lst"    "Minimal Smalltalk for learning and experimentation"
+    printf '%-12s %s\n' "ls4"    "Lightweight Smalltalk v4 with bytecode compiler"
 }
 
 # Print version information
@@ -123,6 +133,10 @@ main() {
                 echo "Run 'st clean_artifacts' without arguments to clean all artifacts." >&2
                 exit 1
             fi
+            exit 0
+            ;;
+        --list|-l|list)
+            print_implementations
             exit 0
             ;;
         help|--help|-h)
