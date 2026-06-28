@@ -47,10 +47,10 @@ _demo_safe_rm() {
     local target="$1"
     [[ -e "$target" ]] || return 0
     local abs dirpart
-    dirpart="$(cd -- "$(dirname -- "$target")" 2>/dev/null && pwd -P)" || return 0
+    dirpart="$(cd -- "$(dirname -- "$target")" 2> /dev/null && pwd -P)" || return 0
     abs="${dirpart}/$(basename -- "$target")"
     case "$abs" in
-        "$_DEMO_CLEAN_DIR"|"$_DEMO_CLEAN_DIR"/*) return 0 ;;  # never delete demo/
+        "$_DEMO_CLEAN_DIR" | "$_DEMO_CLEAN_DIR"/*) return 0 ;; # never delete demo/
     esac
     rm -rf -- "$target"
 }
@@ -75,7 +75,7 @@ demo_cleanup_sandbox() {
     [[ -n "$work_dir" && -d "$work_dir" ]] || return 0
     # Safety: only remove paths that look like our sandboxes.
     case "$work_dir" in
-        */st-demo.*|*/st-demo.XXXXXX)
+        */st-demo.* | */st-demo.XXXXXX)
             rm -rf -- "$work_dir"
             ;;
         *)

@@ -11,7 +11,7 @@ st [-x] lst <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install [-d dir]` | Install LST (downloads and builds from source) |
-| `run [-d dir]` | Run LST (builds if needed) |
+| `run [-d dir]` | Run LST (installs LST if not present) |
 | `version` | Show LST version |
 | `clean-artifacts` | Clean build artifacts |
 | `help` | Show this help message |

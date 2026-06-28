@@ -12,11 +12,11 @@ st [-x] pharo <command> [options]
 |---------|-------------|
 | `install [-d dir] [packages...]` | Install Pharo with optional packages |
 | `run` | Launch the Pharo UI |
-| `eval '<code>'` | Evaluate Smalltalk code (headless) |
-| `load <file.st>` | Load and execute a .st source file |
-| `save [name]` | Save the Pharo image |
-| `metacello <spec>` | Install a Metacello baseline/configuration |
-| `fuel <file.fuel>` | Load a Fuel serialization file |
+| `eval '<code>'` | Evaluate Smalltalk code (headless); installs Pharo if not present |
+| `load <file.st>` | Load and execute a .st source file; installs Pharo if not present |
+| `save [name]` | Save the Pharo image; installs Pharo if not present |
+| `metacello <spec>` | Install a Metacello baseline/configuration; installs Pharo if not present |
+| `fuel <file.fuel>` | Load a Fuel serialization file; installs Pharo if not present |
 | `search <term>` | Search for packages |
 | `list` | List available packages (cached) |
 | `update` | Update package cache |
@@ -24,6 +24,21 @@ st [-x] pharo <command> [options]
 | `clean-artifacts` | Clean installed artifacts |
 | `version` | Show Pharo version |
 | `help` | Show this help message |
+
+## Clap Commands
+
+Pharo's command-line handler ([Clap](https://github.com/pharo-project/pharo)) exposes
+headless subcommands run against a Pharo image. These back the `st pharo` commands
+`eval`, `load`, `save`, `metacello`, and `fuel` (which install Pharo automatically
+if no image is present):
+
+| Clap command | `st pharo` equivalent | Description |
+|--------------|------------------------|-------------|
+| `eval <code>` | `st pharo eval '<code>'` | Evaluate Smalltalk code headless |
+| `st <file.st>` | `st pharo load <file.st>` | Load and execute a .st source file |
+| `save [name]` | `st pharo save [name]` | Save the image |
+| `metacello <spec>` | `st pharo metacello <spec>` | Load a Metacello baseline/configuration |
+| `fuel load <file.fuel>` | `st pharo fuel <file.fuel>` | Load a Fuel serialization file |
 
 ## Options
 

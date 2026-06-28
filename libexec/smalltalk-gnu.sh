@@ -25,16 +25,16 @@ unescape_gst_alias() {
     if [[ -n "${ZSH_VERSION:-}" ]] || [[ -n "${BASH_VERSION:-}" ]]; then
         # Check if gst is an alias
         local gst_type
-        gst_type=$(type gst 2>/dev/null || true)
+        gst_type=$(type gst 2> /dev/null || true)
         if [[ "$gst_type" == *"is an alias"* ]]; then
-            unalias gst 2>/dev/null || true
+            unalias gst 2> /dev/null || true
         fi
     fi
 }
 
 # Check if GNU Smalltalk is installed
 is_gnustack_installed() {
-    if command -v gst &>/dev/null; then
+    if command -v gst &> /dev/null; then
         echo "system"
         return 0
     fi
@@ -90,16 +90,28 @@ install_gnustack_from_source() {
         die "Failed to extract GNU Smalltalk source"
     fi
 
-    cd "$source_dir" || { cd "$original_dir"; die "Cannot change to source directory"; }
+    cd "$source_dir" || {
+                          cd "$original_dir"
+                                              die "Cannot change to source directory"
+    }
 
     log_info "Configuring..."
-    ./configure --prefix="$install_dir" || { cd "$original_dir"; die "Configuration failed"; }
+    ./configure --prefix="$install_dir" || {
+                                             cd "$original_dir"
+                                                                 die "Configuration failed"
+    }
 
     log_info "Building (this may take a while)..."
-    make -j"$(nproc 2>/dev/null || echo 4)" || { cd "$original_dir"; die "Build failed"; }
+    make -j"$(nproc 2> /dev/null || echo 4)" || {
+                                                 cd "$original_dir"
+                                                                     die "Build failed"
+    }
 
     log_info "Installing..."
-    make install || { cd "$original_dir"; die "Installation failed"; }
+    make install || {
+                      cd "$original_dir"
+                                          die "Installation failed"
+    }
 
     cd "$original_dir"
 
@@ -130,14 +142,14 @@ install_gnustack_package() {
         linux)
             log_info "GNU Smalltalk requires sudo privileges for package installation."
             log_info "You may be prompted for your password."
-            
+
             if [[ -z "$SMALLTALK_YES" ]]; then
                 if ! confirm "Continue with sudo installation? [y/N] "; then
                     log_info "Installation cancelled. Use --source to build without sudo."
                     return 1
                 fi
             fi
-            
+
             if cmd_exists apt-get; then
                 log_info "Installing GNU Smalltalk via apt..."
                 sudo apt-get install -y smalltalk
@@ -182,7 +194,6 @@ smalltalk_gnu_help() {
     load_help_from_doc "gnu"
 }
 
-
 smalltalk_gnu_install() {
     local use_source=false
     local install_arg=""
@@ -217,6 +228,18 @@ smalltalk_gnu_install() {
 }
 
 smalltalk_gnu_run() {
+    if ! is_gnustack_installed; then
+        log_info "GNU Smalltalk not found, installing..."
+        smalltalk_gnu_install || {
+                                   log_error "GNU Smalltalk installation failed"
+                                                                                  return 1
+        }
+        if ! is_gnustack_installed; then
+            log_error "GNU Smalltalk installed but 'gst' not found on PATH"
+            log_info "Add the install bin directory to your PATH or restart your shell"
+            return 1
+        fi
+    fi
     run_gnustack "$@"
 }
 
@@ -263,7 +286,7 @@ smalltalk_gnu_clean_artifacts() {
         )
 
         for pattern in "${patterns[@]}"; do
-            find . -maxdepth 2 -name "$pattern" -exec rm -rf -- {} \; 2>/dev/null || true
+            find . -maxdepth 2 -name "$pattern" -exec rm -rf -- {} \; 2> /dev/null || true
         done
 
         manifest_remove "gnu"

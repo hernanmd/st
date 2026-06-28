@@ -11,7 +11,7 @@ st [-x] squeak <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install [ver] [-d dir]` | Install Squeak (options: stable, 6.1, 6.0, 5.3) |
-| `run` | Launch Squeak |
+| `run` | Launch Squeak (installs Squeak if not present) |
 | `search <term>` | Search for packages |
 | `list` | List available packages |
 | `update` | Update package information |

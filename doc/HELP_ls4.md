@@ -11,8 +11,8 @@ st [-x] ls4 <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install [-d dir]` | Install LS4 (downloads and builds from source) |
-| `run [-d dir]` | Launch the LS4 Web IDE (requires graphical display) |
-| `eval [-d dir]` | Run the LS4 REPL evaluator (headless) |
+| `run [-d dir]` | Launch the LS4 Web IDE (requires graphical display); installs LS4 if not present |
+| `eval [-d dir]` | Run the LS4 REPL evaluator (headless); installs LS4 if not present |
 | `versions` | List available versions from GitHub releases |
 | `version` | Show LS4 version |
 | `clean-artifacts` | Clean build artifacts |

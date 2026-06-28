@@ -11,8 +11,8 @@ st [-x] cuis <command> [options]
 | Command | Description |
 |---------|-------------|
 | `install [ver] [-d dir]` | Install Cuis (default: stable, options: stable, 7.0, 6.0) |
-| `run` | Launch Cuis |
-| `eval '<code>'` | Evaluate Smalltalk code (headless) |
+| `run` | Launch Cuis (installs Cuis if not present) |
+| `eval '<code>'` | Evaluate Smalltalk code (headless); installs Cuis if not present |
 | `search <term>` | Search for packages |
 | `list` | List available packages |
 | `update` | Update package information |

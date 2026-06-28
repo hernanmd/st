@@ -11,7 +11,7 @@ st [-x] gnu <command>
 | Command | Description |
 |---------|-------------|
 | `install [--source]` | Install GNU Smalltalk (use --source for building from source) |
-| `run [file]` | Start the REPL (or run a specific file) |
+| `run [file]` | Start the REPL (or run a specific file); installs GNU Smalltalk if not present |
 | `search <term>` | Search for packages |
 | `list` | List available packages |
 | `update` | Update package information |

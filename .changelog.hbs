@@ -1,0 +1,21 @@
+{{!-- auto-changelog Handlebars template for the `st` project.
+  Used by .release-it.json: `npx auto-changelog --stdout --commit-limit false -u --template ./.changelog.hbs`
+  Produces a Keep a Changelog-style body for each GitHub release. --}}
+{{#each releases}}
+## [{{title}}]{{#if href}}({{href}}){{/if}} - {{date}}
+
+{{#if summary}}
+{{summary}}
+
+{{/if}}
+{{#each merges}}
+- {{#if breaking}}**Breaking:** {{/if}}{{message}}{{#if href}} ([{{id}}]({{href}})){{/if}}
+{{/each}}
+{{#each fixes}}
+- Fixes {{commit.label}}{{#if commit.href}} ([{{commit.shorthash}}]({{commit.href}})){{/if}}
+{{/each}}
+{{#each commits}}
+- {{#if breaking}}**Breaking:** {{/if}}{{subject}}{{#if href}} ([{{shorthash}}]({{href}})){{/if}}
+{{/each}}
+
+{{/each}}

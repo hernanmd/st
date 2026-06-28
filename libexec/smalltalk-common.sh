@@ -66,11 +66,11 @@ declare -a _TEMP_DIRS=()
 # Cleanup function registered with trap
 _cleanup_temp_resources() {
     local i
-    for (( i=${#_TEMP_FILES[@]}-1; i>=0; i-- )); do
-        rm -f -- "${_TEMP_FILES[$i]}" 2>/dev/null || true
+    for ((i = ${#_TEMP_FILES[@]} - 1; i >= 0; i--)); do
+        rm -f -- "${_TEMP_FILES[$i]}" 2> /dev/null || true
     done
-    for (( i=${#_TEMP_DIRS[@]}-1; i>=0; i-- )); do
-        rm -rf -- "${_TEMP_DIRS[$i]}" 2>/dev/null || true
+    for ((i = ${#_TEMP_DIRS[@]} - 1; i >= 0; i--)); do
+        rm -rf -- "${_TEMP_DIRS[$i]}" 2> /dev/null || true
     done
 }
 
@@ -85,7 +85,7 @@ trap _cleanup_temp_resources EXIT INT TERM
 make_temp_file() {
     local prefix="${1:-st}"
     local tmpfile
-    tmpfile="$(mktemp "${TMPDIR:-/tmp}/${prefix}.XXXXXX" 2>/dev/null)" || return 1
+    tmpfile="$(mktemp "${TMPDIR:-/tmp}/${prefix}.XXXXXX" 2> /dev/null)" || return 1
     _TEMP_FILES+=("$tmpfile")
     printf '%s' "$tmpfile"
 }
@@ -98,7 +98,7 @@ make_temp_file() {
 make_temp_dir() {
     local prefix="${1:-st}"
     local tmpdir
-    tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/${prefix}.XXXXXX" 2>/dev/null)" || return 1
+    tmpdir="$(mktemp -d "${TMPDIR:-/tmp}/${prefix}.XXXXXX" 2> /dev/null)" || return 1
     _TEMP_DIRS+=("$tmpdir")
     printf '%s' "$tmpdir"
 }
@@ -124,7 +124,7 @@ validate_path() {
 
     # Check for path traversal attempts
     case "$path" in
-        ..|../*|*/../*|*/..)
+        .. | ../* | */../* | */..)
             return 1
             ;;
     esac
@@ -132,8 +132,8 @@ validate_path() {
     # Check if path starts with allowed prefix (if specified)
     if [[ -n "$allowed_prefix" ]]; then
         local abs_path abs_prefix
-        abs_path="$(cd -- "$path" 2>/dev/null && pwd -P || printf '%s' "$path")"
-        abs_prefix="$(cd -- "$allowed_prefix" 2>/dev/null && pwd -P || printf '%s' "$allowed_prefix")"
+        abs_path="$(cd -- "$path" 2> /dev/null && pwd -P || printf '%s' "$path")"
+        abs_prefix="$(cd -- "$allowed_prefix" 2> /dev/null && pwd -P || printf '%s' "$allowed_prefix")"
         if [[ "$abs_path" != "$abs_prefix"* ]]; then
             return 1
         fi
@@ -182,7 +182,7 @@ validate_url() {
 
     # Block file:// and other dangerous protocols
     case "$url" in
-        file://*|ftp://*|javascript:*)
+        file://* | ftp://* | javascript:*)
             return 1
             ;;
     esac
@@ -214,7 +214,7 @@ enable_debug() {
 # Disable debug mode
 disable_debug() {
     export DEBUG=0
-    set +x 2>/dev/null || true
+    set +x 2> /dev/null || true
 }
 
 #################################
@@ -261,13 +261,13 @@ manifest_add() {
         done
 
         jq --arg impl "$impl_escaped" \
-           --arg dir "$dir_escaped" \
-           --argjson files "$files_json" \
-           '.[$impl] = {"install_dir": $dir, "files": $files, "timestamp": now}' \
-           "$MANIFEST_FILE" > "$temp_file" && mv -- "$temp_file" "$MANIFEST_FILE"
+            --arg dir "$dir_escaped" \
+            --argjson files "$files_json" \
+            '.[$impl] = {"install_dir": $dir, "files": $files, "timestamp": now}' \
+            "$MANIFEST_FILE" > "$temp_file" && mv -- "$temp_file" "$MANIFEST_FILE"
     else
         # Fallback: just store the install directory
-        sed -i.bak "s/\"$impl_escaped\":/\"$impl_escaped\":{\"install_dir\":\"$dir_escaped\"/" "$MANIFEST_FILE" 2>/dev/null || true
+        sed -i.bak "s/\"$impl_escaped\":/\"$impl_escaped\":{\"install_dir\":\"$dir_escaped\"/" "$MANIFEST_FILE" 2> /dev/null || true
     fi
 }
 
@@ -282,7 +282,7 @@ manifest_get_dir() {
     init_manifest
 
     if cmd_exists jq; then
-        jq -r --arg impl "$impl" '.[$impl].install_dir // empty' "$MANIFEST_FILE" 2>/dev/null || true
+        jq -r --arg impl "$impl" '.[$impl].install_dir // empty' "$MANIFEST_FILE" 2> /dev/null || true
     fi
 }
 
@@ -297,7 +297,7 @@ manifest_get_files() {
     init_manifest
 
     if cmd_exists jq; then
-        jq -r --arg impl "$impl" '.[$impl].files[] // empty' "$MANIFEST_FILE" 2>/dev/null || true
+        jq -r --arg impl "$impl" '.[$impl].files[] // empty' "$MANIFEST_FILE" 2> /dev/null || true
     fi
 }
 
@@ -349,7 +349,7 @@ clean_all_artifacts() {
 
     if cmd_exists jq; then
         local impls
-        impls="$(jq -r 'keys[]' "$MANIFEST_FILE" 2>/dev/null)"
+        impls="$(jq -r 'keys[]' "$MANIFEST_FILE" 2> /dev/null)"
 
         if [[ -n "$impls" ]]; then
             while IFS= read -r impl; do
@@ -377,7 +377,7 @@ clean_all_artifacts() {
     # Only remove files that exist in current directory
     for f in "${files_to_clean[@]}"; do
         if [[ -e "$f" ]]; then
-            rm -rf -- "$f" 2>/dev/null || true
+            rm -rf -- "$f" 2> /dev/null || true
         fi
     done
 
@@ -385,7 +385,7 @@ clean_all_artifacts() {
     # Only remove if it's clearly a Smalltalk script file name pattern
     for f in *.st; do
         if [[ -f "$f" && "$f" =~ ^(script|load|run|test).*\.st$ ]]; then
-            rm -f -- "$f" 2>/dev/null || true
+            rm -f -- "$f" 2> /dev/null || true
         fi
     done
 
@@ -509,7 +509,7 @@ load_help_from_doc() {
 # Returns:
 #   0 if command exists, non-zero otherwise
 cmd_exists() {
-    type -- "$1" &>/dev/null
+    type -- "$1" &> /dev/null
     return $?
 }
 
@@ -552,7 +552,7 @@ get_os() {
     case "$(uname -s)" in
         Linux*)     os_type="linux" ;;
         Darwin*)    os_type="macos" ;;
-        MINGW*|MSYS*) os_type="windows" ;;
+        MINGW* | MSYS*) os_type="windows" ;;
         *)          os_type="unknown" ;;
     esac
     printf '%s' "$os_type"
@@ -564,9 +564,9 @@ get_arch() {
     local arch
     case "$(uname -m)" in
         x86_64)     arch="x86_64" ;;
-        aarch64|arm64) arch="arm64" ;;
+        aarch64 | arm64) arch="arm64" ;;
         armv7l)     arch="arm" ;;
-        i386|i686)  arch="x86" ;;
+        i386 | i686) arch="x86" ;;
         *)          arch="unknown" ;;
     esac
     printf '%s' "$arch"
@@ -619,7 +619,7 @@ extract_archive() {
         *.zip)
             unzip $unzip_flags -o "$archive" -d "$dest_dir"
             ;;
-        *.tar.gz|*.tgz)
+        *.tar.gz | *.tgz)
             tar $tar_flags "$archive" -C "$dest_dir"
             ;;
         *.tar.xz)
@@ -660,7 +660,7 @@ confirm() {
 
     read -p "$prompt [y/N] " response
     case "$response" in
-        [yY][eE][sS]|[yY])
+        [yY][eE][sS] | [yY])
             return 0
             ;;
         *)
@@ -702,13 +702,13 @@ detect_existing_smalltalk() {
     fi
 
     # LST detection
-    if [[ -f "${dir}/lst3r" ]] || command -v lst3r &>/dev/null; then
+    if [[ -f "${dir}/lst3r" ]] || command -v lst3r &> /dev/null; then
         printf 'lst'
         return 0
     fi
 
     # LS4 detection
-    if [[ -f "${dir}/build/lst" ]] || command -v lst &>/dev/null; then
+    if [[ -f "${dir}/build/lst" ]] || command -v lst &> /dev/null; then
         printf 'ls4'
         return 0
     fi
@@ -767,7 +767,7 @@ update_monticello_packages() {
     # Check GitHub API rate limit to avoid being blocked
     if [[ -f "$rate_limit_file" ]]; then
         local last_call=0
-        last_call="$(cat -- "$rate_limit_file" 2>/dev/null || printf '0')"
+        last_call="$(cat -- "$rate_limit_file" 2> /dev/null || printf '0')"
         local now
         now="$(date +%s)"
         local min_interval=1  # Minimum 1 second between API calls
@@ -791,15 +791,15 @@ update_monticello_packages() {
         # Check if we got an error response
         if cmd_exists jq; then
             local errors
-            errors="$(jq '.errors // [] | length' "$cache_file" 2>/dev/null || printf '0')"
+            errors="$(jq '.errors // [] | length' "$cache_file" 2> /dev/null || printf '0')"
             if [[ "$errors" -gt 0 ]]; then
                 log_error "GitHub API returned errors"
-                jq '.errors[]?.message' "$cache_file" 2>/dev/null
+                jq '.errors[]?.message' "$cache_file" 2> /dev/null
                 return 1
             fi
 
             local rate_remaining
-            rate_remaining="$(jq '.response.headers."X-RateLimit-Remaining" // "unknown"' "$cache_file" 2>/dev/null || printf 'unknown')"
+            rate_remaining="$(jq '.response.headers."X-RateLimit-Remaining" // "unknown"' "$cache_file" 2> /dev/null || printf 'unknown')"
             if [[ "$rate_remaining" == "0" ]]; then
                 log_warn "GitHub API rate limit reached"
             fi
@@ -831,7 +831,7 @@ check_clap_available() {
 
     # Try to get Clap version
     local version_output
-    version_output="$("${image_path}/pharo" "${image_path}/Pharo.image" eval --save "SpEnvironment current versionString" 2>/dev/null || true)"
+    version_output="$("${image_path}/pharo" "${image_path}/Pharo.image" eval --save "SpEnvironment current versionString" 2> /dev/null || true)"
 
     [[ -n "$version_output" ]]
 }
@@ -912,7 +912,7 @@ get_image_version() {
 
     if [[ -f "${image_path}/Pharo.image" ]]; then
         if [[ -f "${image_path}/pharo" ]]; then
-            "./pharo" "${image_path}/Pharo.image" eval --save "Smalltalk version" 2>/dev/null || printf 'unknown'
+            "./pharo" "${image_path}/Pharo.image" eval --save "Smalltalk version" 2> /dev/null || printf 'unknown'
         else
             printf 'unknown'
         fi
@@ -932,7 +932,7 @@ save_image() {
     fi
 
     log_info "Saving image..."
-    "./pharo" "${image_path}/Pharo.image" save 2>/dev/null || true
+    "./pharo" "${image_path}/Pharo.image" save 2> /dev/null || true
 }
 
 # Evaluate Smalltalk code

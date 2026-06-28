@@ -31,7 +31,7 @@ is_lst_installed() {
     done
 
     # Check PATH
-    if command -v lst3 &>/dev/null; then
+    if command -v lst3 &> /dev/null; then
         echo "system"
         return 0
     fi
@@ -84,19 +84,31 @@ download_lst() {
 
     # Move contents of extracted directory to install_dir
     log_info "Moving files to installation directory..."
-    mv "$extracted_dir"/* . 2>/dev/null || true
-    mv "$extracted_dir"/.* . 2>/dev/null || true
-    rmdir "$extracted_dir" 2>/dev/null || true
+    mv "$extracted_dir"/* . 2> /dev/null || true
+    mv "$extracted_dir"/.* . 2> /dev/null || true
+    rmdir "$extracted_dir" 2> /dev/null || true
 
     # Build the  binary
     log_info "Building Little Smalltalk v3..."
     if [[ -f "Makefile" ]]; then
-        make -j"$(nproc 2>/dev/null || echo 4)" || { cd "$original_dir"; die "Build failed"; }
+        make -j"$(nproc 2> /dev/null || echo 4)" || {
+                                                     cd "$original_dir"
+                                                                         die "Build failed"
+        }
     elif [[ -f "CMakeLists.txt" ]]; then
         mkdir -p build
-        cd build || { cd "$original_dir"; die "Cannot create build directory"; }
-        cmake .. || { cd "$original_dir"; die "CMake configuration failed"; }
-        make -j"$(nproc 2>/dev/null || echo 4)" || { cd "$original_dir"; die "Build failed"; }
+        cd build || {
+                      cd "$original_dir"
+                                          die "Cannot create build directory"
+        }
+        cmake .. || {
+                      cd "$original_dir"
+                                          die "CMake configuration failed"
+        }
+        make -j"$(nproc 2> /dev/null || echo 4)" || {
+                                                     cd "$original_dir"
+                                                                         die "Build failed"
+        }
         cd ..
     else
         cd "$original_dir"
@@ -144,7 +156,7 @@ smalltalk_lst_install() {
     # Parse options
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -d|--dir)
+            -d | --dir)
                 install_dir="$2"
                 shift 2
                 ;;
@@ -190,7 +202,7 @@ smalltalk_lst_run() {
     # Parse options
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -d|--dir)
+            -d | --dir)
                 target_dir="$2"
                 shift 2
                 ;;
@@ -259,9 +271,9 @@ smalltalk_lst_clean_artifacts() {
         cd "$impl_dir" || return 1
 
         # Clean build artifacts but keep source
-        rm -f -- lst3r 2>/dev/null || true
-        rm -rf -- build 2>/dev/null || true
-        rm -f -- *.o *.a 2>/dev/null || true
+        rm -f -- lst3r 2> /dev/null || true
+        rm -rf -- build 2> /dev/null || true
+        rm -f -- *.o *.a 2> /dev/null || true
 
         manifest_remove "lst"
         log_success "Little Smalltalk build artifacts cleaned"
@@ -278,9 +290,9 @@ smalltalk_lst_version() {
     }
 
     if [[ "$lst_path" == "system" ]]; then
-        lst3 --version 2>/dev/null || echo "LST (version unknown)"
+        lst3 --version 2> /dev/null || echo "LST (version unknown)"
     elif [[ -f "${lst_path}/lst3" ]]; then
-        "${lst_path}/lst3" --version 2>/dev/null || echo "LST (version unknown)"
+        "${lst_path}/lst3" --version 2> /dev/null || echo "LST (version unknown)"
     else
         echo "Little Smalltalk v3"
     fi

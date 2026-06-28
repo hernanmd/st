@@ -31,7 +31,7 @@ validate_path() {
 
     # Check for path traversal attempts (.. components)
     case "$path" in
-        ..|../*|*/../*|*/..)
+        .. | ../* | */../* | */..)
             printf 'Error: Invalid path (contains .. traversal)\n' >&2
             return 1
             ;;
@@ -40,8 +40,8 @@ validate_path() {
     # Check if path starts with allowed prefix (if specified)
     if [[ -n "$allowed_prefix" ]]; then
         local abs_path abs_prefix
-        abs_path="$(cd -- "$path" 2>/dev/null && pwd -P || printf '%s' "$path")"
-        abs_prefix="$(cd -- "$allowed_prefix" 2>/dev/null && pwd -P || printf '%s' "$allowed_prefix")"
+        abs_path="$(cd -- "$path" 2> /dev/null && pwd -P || printf '%s' "$path")"
+        abs_prefix="$(cd -- "$allowed_prefix" 2> /dev/null && pwd -P || printf '%s' "$allowed_prefix")"
         if [[ "$abs_path" != "$abs_prefix"* ]]; then
             printf 'Error: Path must be under %s\n' "$allowed_prefix" >&2
             return 1
@@ -115,7 +115,7 @@ error_exit() {
 #   $1 - command name
 # Returns: 0 if command exists, non-zero otherwise
 cmd_exists() {
-    command -v "$1" >/dev/null 2>&1
+    command -v "$1" > /dev/null 2>&1
 }
 
 # Source the common utilities for backwards compatibility

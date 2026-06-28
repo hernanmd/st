@@ -23,31 +23,31 @@ LS4_URL_BASE="https://github.com/${LS4_REPO}/archive/refs/tags"
 # Get the latest version tag from GitHub releases
 get_ls4_latest_version() {
     local latest_version
-    latest_version=$(curl -s "$LS4_API_URL/latest" 2>/dev/null | jq -r '.tag_name // empty' 2>/dev/null)
-    
+    latest_version=$(curl -s "$LS4_API_URL/latest" 2> /dev/null | jq -r '.tag_name // empty' 2> /dev/null)
+
     if [[ -z "$latest_version" ]]; then
         # Fallback: try to get the most recent release tag
-        latest_version=$(curl -s "$LS4_API_URL" 2>/dev/null | jq -r '.[0].tag_name // empty' 2>/dev/null)
+        latest_version=$(curl -s "$LS4_API_URL" 2> /dev/null | jq -r '.[0].tag_name // empty' 2> /dev/null)
     fi
-    
+
     if [[ -z "$latest_version" ]]; then
         die "Failed to fetch latest version from GitHub releases"
     fi
-    
+
     echo "$latest_version"
 }
 
 # List available versions (tags) from GitHub
 list_ls4_versions() {
     log_info "Fetching available versions from GitHub..."
-    
+
     local versions
-    versions=$(curl -s "$LS4_API_URL" 2>/dev/null | jq -r '.[].tag_name // empty' 2>/dev/null)
-    
+    versions=$(curl -s "$LS4_API_URL" 2> /dev/null | jq -r '.[].tag_name // empty' 2> /dev/null)
+
     if [[ -z "$versions" ]]; then
         die "Failed to fetch versions from GitHub"
     fi
-    
+
     echo "Available versions:"
     echo "$versions" | while IFS= read -r version; do
         echo "  $version"
@@ -84,7 +84,7 @@ is_ls4_installed() {
     fi
 
     # Check PATH
-    if command -v lst &>/dev/null; then
+    if command -v lst &> /dev/null; then
         echo "system"
         return 0
     fi
@@ -107,14 +107,17 @@ download_ls4() {
 
     # Ensure the directory exists
     mkdir -p "$install_dir"
-    cd "$install_dir" || { cd "$original_dir"; die "Cannot change to directory: $install_dir"; }
+    cd "$install_dir" || {
+                           cd "$original_dir"
+                                               die "Cannot change to directory: $install_dir"
+    }
 
     install_dir="$(pwd)"
 
     # Construct download URL (version includes 'v' prefix from GitHub tags)
     local archive_name="littlesmalltalk-${version}.zip"
     local download_url="${LS4_URL_BASE}/${version}.zip"
-    
+
     # Download the archive
     download_file "$download_url" "$archive_name"
 
@@ -145,17 +148,26 @@ download_ls4() {
 
     # Move contents of extracted directory to install_dir
     log_info "Moving files to installation directory..."
-    mv "$extracted_dir"/* . 2>/dev/null || true
-    mv "$extracted_dir"/.* . 2>/dev/null || true
-    rmdir "$extracted_dir" 2>/dev/null || true
+    mv "$extracted_dir"/* . 2> /dev/null || true
+    mv "$extracted_dir"/.* . 2> /dev/null || true
+    rmdir "$extracted_dir" 2> /dev/null || true
 
     # Build the binary using CMake
     log_info "Building Little Smalltalk v4..."
     if [[ -f "CMakeLists.txt" ]]; then
         mkdir -p build
-        cd build || { cd "$original_dir"; die "Cannot create build directory"; }
-        cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. || { cd "$original_dir"; die "CMake configuration failed"; }
-        make -j"$(nproc 2>/dev/null || echo 4)" || { cd "$original_dir"; die "Build failed"; }
+        cd build || {
+                      cd "$original_dir"
+                                          die "Cannot create build directory"
+        }
+        cmake -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. || {
+                                                         cd "$original_dir"
+                                                                             die "CMake configuration failed"
+        }
+        make -j"$(nproc 2> /dev/null || echo 4)" || {
+                                                     cd "$original_dir"
+                                                                         die "Build failed"
+        }
         cd ..
     else
         cd "$original_dir"
@@ -204,7 +216,7 @@ smalltalk_ls4_install() {
     # Parse options
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -d|--dir)
+            -d | --dir)
                 install_dir="$2"
                 shift 2
                 ;;
@@ -251,7 +263,7 @@ smalltalk_ls4_run() {
     # Parse options
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -d|--dir)
+            -d | --dir)
                 target_dir="$2"
                 shift 2
                 ;;
@@ -312,7 +324,7 @@ smalltalk_ls4_eval() {
     # Parse options
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -d|--dir)
+            -d | --dir)
                 target_dir="$2"
                 shift 2
                 ;;
@@ -392,8 +404,8 @@ smalltalk_ls4_clean_artifacts() {
         cd "$impl_dir" || return 1
 
         # Clean build artifacts but keep source
-        rm -rf -- build 2>/dev/null || true
-        rm -f -- *.o *.a 2>/dev/null || true
+        rm -rf -- build 2> /dev/null || true
+        rm -f -- *.o *.a 2> /dev/null || true
 
         manifest_remove "ls4"
         log_success "Little Smalltalk v4 build artifacts cleaned"
@@ -404,11 +416,11 @@ smalltalk_ls4_clean_artifacts() {
 
 smalltalk_ls4_version() {
     local target_dir=""
-    
+
     # Parse options
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -d|--dir)
+            -d | --dir)
                 target_dir="$2"
                 shift 2
                 ;;
@@ -417,9 +429,9 @@ smalltalk_ls4_version() {
                 ;;
         esac
     done
-    
+
     local ls4_dir
-    
+
     if [[ -n "$target_dir" ]]; then
         ls4_dir="$target_dir"
     else
@@ -428,16 +440,16 @@ smalltalk_ls4_version() {
             return 1
         }
     fi
-    
+
     cd "$ls4_dir" || {
         echo "Cannot change to LS4 directory: $ls4_dir"
         return 1
     }
-    
+
     # Get the version from git tags if available
     if [[ -d ".git" ]]; then
         local version
-        version=$(git describe --tags 2>/dev/null || echo "unknown")
+        version=$(git describe --tags 2> /dev/null || echo "unknown")
         echo "Little Smalltalk v4 $version"
     else
         echo "Little Smalltalk v4"

@@ -80,17 +80,17 @@ st pharo install -d ~/my-pharo
 st pharo run
 
 # Evaluate Smalltalk code directly
-st pharo run eval '1 + 2'
-st pharo run eval 'Date today'
+st pharo eval '1 + 2'
+st pharo eval 'Date today'
 
 # Run a Smalltalk script file
-st pharo run st myscript.st
+st pharo load myscript.st
 
 # Save the image
-st pharo run save
+st pharo save
 
 # Install a Metacello baseline
-st pharo run metacello 'BaselineOfSeaside3'
+st pharo metacello 'BaselineOfSeaside3'
 ```
 
 ### Pharo Package Management
@@ -203,13 +203,13 @@ st gt install -d ~/gt
 st gt run
 
 # Evaluate Smalltalk code
-st gt run eval '1 + 2'
+st gt eval '1 + 2'
 
 # Run a Smalltalk script
-st gt run st myscript.st
+st gt load myscript.st
 
 # Install a Metacello baseline
-st gt run metacello 'BaselineOfPhexample'
+st gt metacello 'BaselineOfPhexample'
 ```
 
 ### GT Version
@@ -369,7 +369,7 @@ st pharo run
 st pharo search seaside
 
 # 4. Install a package (in Pharo image)
-st pharo run metacello 'BaselineOfSeaside3'
+st pharo metacello 'BaselineOfSeaside3'
 ```
 
 ### Multiple Implementations

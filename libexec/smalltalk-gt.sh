@@ -62,7 +62,7 @@ get_latest_gt_version() {
     local api_url="https://api.github.com/repos/feenkcom/gtoolkit/releases/latest"
     local version
 
-    version=$(download_file "$api_url" - 2>/dev/null | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4 || echo "latest")
+    version=$(download_file "$api_url" - 2> /dev/null | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4 || echo "latest")
     echo "${version#v}"
 }
 
@@ -134,7 +134,7 @@ download_gt() {
         chmod 755 "GlamorousToolkit.app/Contents/MacOS/GlamorousToolkit"
     fi
 
-    if is_gt_installed >/dev/null; then
+    if is_gt_installed > /dev/null; then
         log_success "Glamorous Toolkit installed successfully to ${install_dir}"
 
         # Register installed files
@@ -172,13 +172,47 @@ run_gt() {
 }
 
 #################################
+## Shared install-or-find helper
+#################################
+
+# Find an existing GT installation (current dir or common locations), or
+# download one into a timestamped directory if none is found. On success CWD is
+# the GT install dir and the global _GT_DIR holds its path. Used by the headless
+# handlers (eval/metacello/load/save) so they auto-install instead of erroring,
+# consistent with `st gt run`, `st pharo eval`, and `st ls4 eval`. Must be called
+# WITHOUT command substitution so the `cd` persists.
+ensure_gt_dir() {
+    _GT_DIR=""
+    local gt_dir
+    gt_dir=$(is_gt_installed 2> /dev/null) || true
+
+    if [[ -n "$gt_dir" ]]; then
+        cd "$gt_dir" || die "Cannot change to GT directory: $gt_dir"
+        _GT_DIR="$(pwd)"
+        return 0
+    fi
+
+    log_info "No Glamorous Toolkit installation found. Installing Glamorous Toolkit..."
+    local timestamp install_dir
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    install_dir="GlamorousToolkit_${timestamp}"
+    mkdir -p "$install_dir"
+    cd "$install_dir" || die "Cannot change to directory: $install_dir"
+    download_gt "$GT_VERSION" "."
+    if ! is_gt_installed > /dev/null; then
+        die "Glamorous Toolkit installation failed"
+    fi
+    _GT_DIR="$(pwd)"
+    log_success "Glamorous Toolkit installed to: $_GT_DIR"
+}
+
+#################################
 ## Command Handlers
 #################################
 
 smalltalk_gt_help() {
     load_help_from_doc "gt"
 }
-
 
 smalltalk_gt_install() {
     local install_dir="."
@@ -187,7 +221,7 @@ smalltalk_gt_install() {
     # Parse options
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -d|--dir)
+            -d | --dir)
                 install_dir="$2"
                 shift 2
                 ;;
@@ -228,11 +262,11 @@ smalltalk_gt_install() {
 
 smalltalk_gt_run() {
     local target_dir=""
-    
+
     # Parse options
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -d|--dir)
+            -d | --dir)
                 target_dir="$2"
                 shift 2
                 ;;
@@ -241,9 +275,9 @@ smalltalk_gt_run() {
                 ;;
         esac
     done
-    
+
     local gt_dir
-    
+
     # If target directory specified, use it; otherwise search for existing GT
     if [[ -n "$target_dir" ]]; then
         gt_dir="$target_dir"
@@ -262,7 +296,7 @@ smalltalk_gt_run() {
             log_success "GT installed to: $gt_dir"
         }
     fi
-    
+
     cd "$gt_dir" || die "Cannot change to GT directory: $gt_dir"
 
     # Launch the GT UI
@@ -286,7 +320,7 @@ smalltalk_gt_search() {
 
     if download_file "$api_url" "$cache_file"; then
         if cmd_exists jq; then
-            jq -r '.items[] | "\(.full_name) - \(.description // "No description")"' "$cache_file" 2>/dev/null || {
+            jq -r '.items[] | "\(.full_name) - \(.description // "No description")"' "$cache_file" 2> /dev/null || {
                 log_error "Failed to parse search results"
                 return 1
             }
@@ -331,7 +365,7 @@ smalltalk_gt_clean_artifacts() {
         )
 
         for pattern in "${patterns[@]}"; do
-            find . -maxdepth 1 -name "$pattern" -exec rm -rf -- {} \; 2>/dev/null || true
+            find . -maxdepth 1 -name "$pattern" -exec rm -rf -- {} \; 2> /dev/null || true
         done
 
         manifest_remove "gt"
@@ -344,17 +378,17 @@ smalltalk_gt_clean_artifacts() {
 
 smalltalk_gt_versions() {
     log_info "Fetching available GT versions from GitHub releases..."
-    
+
     local api_url="https://api.github.com/repos/feenkcom/gtoolkit/releases"
     local versions
-    
-    versions=$(curl -s "$api_url" 2>/dev/null | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4 | sort -V -r || true)
-    
+
+    versions=$(curl -s "$api_url" 2> /dev/null | grep -o '"tag_name": *"[^"]*"' | cut -d'"' -f4 | sort -V -r || true)
+
     if [[ -z "$versions" ]]; then
         log_error "Failed to fetch versions from GitHub"
         return 1
     fi
-    
+
     echo "Available Glamorous Toolkit versions:"
     echo "$versions" | while IFS= read -r version; do
         echo "  $version"
@@ -376,19 +410,19 @@ smalltalk_gt_version() {
     local gt_image="${gt_dir}/GlamorousToolkit.image"
 
     if [[ -f "$gt_cli" ]]; then
-        "$gt_cli" --version 2>/dev/null && return
+        "$gt_cli" --version 2> /dev/null && return
     fi
 
     if [[ -f "$gt_app" ]]; then
-        "$gt_app" --version 2>/dev/null && return
+        "$gt_app" --version 2> /dev/null && return
     fi
 
     if [[ -f "${gt_dir}/GlamorousToolkit" ]]; then
-        "${gt_dir}/GlamorousToolkit" --version 2>/dev/null && return
+        "${gt_dir}/GlamorousToolkit" --version 2> /dev/null && return
     fi
 
     if [[ -f "${gt_dir}/pharo" ]]; then
-        "${gt_dir}/pharo" "$gt_image" eval --save "Smalltalk version" 2>/dev/null && return
+        "${gt_dir}/pharo" "$gt_image" eval --save "Smalltalk version" 2> /dev/null && return
     fi
 
     echo "Glamorous Toolkit version unknown (files found but version command failed)"
@@ -396,30 +430,25 @@ smalltalk_gt_version() {
 
 smalltalk_gt_eval() {
     local code="$*"
-    
+
     if [[ -z "$code" ]]; then
         log_error "Please provide code to evaluate"
         echo "Usage: st gt eval '<code>'"
         return 1
     fi
-    
-    local gt_dir
-    gt_dir=$(is_gt_installed) || {
-        log_error "Glamorous Toolkit is not installed"
-        log_error "Run 'st gt install' first"
-        return 1
-    }
-    
+
+    ensure_gt_dir
+    local gt_dir="$_GT_DIR"
     cd "$gt_dir" || return 1
-    
+
     local gt_image="${gt_dir}/GlamorousToolkit.image"
     local gt_executable="${gt_dir}/GlamorousToolkit"
-    
+
     # Fallback to pharo executable if GT executable doesn't exist
     if [[ -f "${gt_dir}/pharo" ]]; then
         gt_executable="${gt_dir}/pharo"
     fi
-    
+
     if [[ -f "$gt_executable" ]]; then
         "$gt_executable" --headless "$gt_image" eval "$code"
     else
@@ -435,23 +464,18 @@ smalltalk_gt_metacello() {
         echo "Usage: st gt metacello <repo-url> <baseline-name>"
         return 1
     fi
-    
-    local gt_dir
-    gt_dir=$(is_gt_installed) || {
-        log_error "Glamorous Toolkit is not installed"
-        log_error "Run 'st gt install' first"
-        return 1
-    }
-    
+
+    ensure_gt_dir
+    local gt_dir="$_GT_DIR"
     cd "$gt_dir" || return 1
-    
+
     local gt_image="${gt_dir}/GlamorousToolkit.image"
     local gt_executable="${gt_dir}/GlamorousToolkit"
-    
+
     if [[ -f "${gt_dir}/pharo" ]]; then
         gt_executable="${gt_dir}/pharo"
     fi
-    
+
     if [[ -f "$gt_executable" ]]; then
         "$gt_executable" --headless "$gt_image" metacello "$@" --save
     else
@@ -463,29 +487,24 @@ smalltalk_gt_metacello() {
 # Load and execute a .st source file
 smalltalk_gt_load() {
     local st_file="${1:-}"
-    
+
     if [[ -z "$st_file" ]]; then
         log_error "Please provide a .st file to load"
         echo "Usage: st gt load <file.st>"
         return 1
     fi
-    
-    local gt_dir
-    gt_dir=$(is_gt_installed) || {
-        log_error "Glamorous Toolkit is not installed"
-        log_error "Run 'st gt install' first"
-        return 1
-    }
-    
+
+    ensure_gt_dir
+    local gt_dir="$_GT_DIR"
     cd "$gt_dir" || return 1
-    
+
     local gt_image="${gt_dir}/GlamorousToolkit.image"
     local gt_executable="${gt_dir}/GlamorousToolkit"
-    
+
     if [[ -f "${gt_dir}/pharo" ]]; then
         gt_executable="${gt_dir}/pharo"
     fi
-    
+
     if [[ -f "$gt_executable" ]]; then
         "$gt_executable" --headless "$gt_image" load "$st_file"
     else
@@ -497,23 +516,18 @@ smalltalk_gt_load() {
 # Save the GT image
 smalltalk_gt_save() {
     local save_name="${1:-}"
-    
-    local gt_dir
-    gt_dir=$(is_gt_installed) || {
-        log_error "Glamorous Toolkit is not installed"
-        log_error "Run 'st gt install' first"
-        return 1
-    }
-    
+
+    ensure_gt_dir
+    local gt_dir="$_GT_DIR"
     cd "$gt_dir" || return 1
-    
+
     local gt_image="${gt_dir}/GlamorousToolkit.image"
     local gt_executable="${gt_dir}/GlamorousToolkit"
-    
+
     if [[ -f "${gt_dir}/pharo" ]]; then
         gt_executable="${gt_dir}/pharo"
     fi
-    
+
     if [[ -f "$gt_executable" ]]; then
         if [[ -z "$save_name" ]]; then
             "$gt_executable" --headless "$gt_image" save

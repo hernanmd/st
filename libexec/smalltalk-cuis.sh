@@ -28,11 +28,11 @@ get_cuis_versions() {
     ensure_cache_dir
     mkdir -p "${CUIS_CACHE_DIR}"
 
-    if [[ -f "$releases_file" ]] && [[ $(find "$releases_file" -mtime +1 2>/dev/null) ]]; then
+    if [[ -f "$releases_file" ]] && [[ $(find "$releases_file" -mtime +1 2> /dev/null) ]]; then
         cat "$releases_file"
     else
-        download_file "$api_url" "$releases_file" 2>/dev/null || true
-        cat "$releases_file" 2>/dev/null || echo '{}'
+        download_file "$api_url" "$releases_file" 2> /dev/null || true
+        cat "$releases_file" 2> /dev/null || echo '{}'
     fi
 }
 
@@ -47,13 +47,13 @@ get_cuis_url() {
 
     local base_url
     case "$version" in
-        stable|latest)
+        stable | latest)
             base_url="${CUIS_URL_BASE}/Cuis7-6/archive/refs/heads/main.zip"
             ;;
-        7.0|7.0*)
+        7.0 | 7.0*)
             base_url="${CUIS_URL_BASE}/Cuis7-0/archive/refs/heads/main.zip"
             ;;
-        6.0|6.0*)
+        6.0 | 6.0*)
             base_url="${CUIS_URL_BASE}/Cuis6-0/archive/refs/heads/main.zip"
             ;;
         *)
@@ -88,7 +88,7 @@ is_cuis_installed() {
         fi
     done
     shopt -u nullglob
-    
+
     # Check for timestamped directories (e.g., Cuis-stable_20240410_220002)
     shopt -s nullglob
     for dir in Cuis-*; do
@@ -104,7 +104,7 @@ is_cuis_installed() {
                 fi
             done
             # Also check for Cuis7-6-main style directory
-            if [[ -f "$dir/CuisImage"/*.image ]]; then
+            if compgen -G "${dir}/CuisImage/*.image" > /dev/null; then
                 shopt -u nullglob
                 echo "$(pwd)/$dir"
                 return 0
@@ -112,7 +112,7 @@ is_cuis_installed() {
         fi
     done
     shopt -u nullglob
-    
+
     # Check for Cuis in common locations
     local search_dirs=("$HOME/Cuis" "$HOME/cuis" "$HOME/.local/share/cuis")
     for dir in "${search_dirs[@]}"; do
@@ -141,7 +141,7 @@ is_cuis_installed() {
         done
         shopt -u nullglob
     done
-    
+
     return 1
 }
 
@@ -151,7 +151,7 @@ find_cuis_in_current_dir() {
     shopt -s nullglob
     local latest_dir=""
     local latest_time=0
-    
+
     for img in Cuis*.image; do
         if [[ -f "$img" ]]; then
             shopt -u nullglob
@@ -160,14 +160,14 @@ find_cuis_in_current_dir() {
         fi
     done
     shopt -u nullglob
-    
+
     # Check for timestamped directories
     for dir in Cuis-*; do
         if [[ -d "$dir" ]]; then
             for img in "$dir"/Cuis*.image; do
                 if [[ -f "$img" ]]; then
                     local mtime
-                    mtime=$(stat -f %m "$dir" 2>/dev/null || stat -c %Y "$dir" 2>/dev/null || echo 0)
+                    mtime=$(stat -f %m "$dir" 2> /dev/null || stat -c %Y "$dir" 2> /dev/null || echo 0)
                     if [[ "$mtime" -gt "$latest_time" ]]; then
                         latest_time="$mtime"
                         latest_dir="$dir"
@@ -179,7 +179,7 @@ find_cuis_in_current_dir() {
                 for img in "$dir/CuisImage"/*.image; do
                     if [[ -f "$img" ]]; then
                         local mtime
-                        mtime=$(stat -f %m "$dir" 2>/dev/null || stat -c %Y "$dir" 2>/dev/null || echo 0)
+                        mtime=$(stat -f %m "$dir" 2> /dev/null || stat -c %Y "$dir" 2> /dev/null || echo 0)
                         if [[ "$mtime" -gt "$latest_time" ]]; then
                             latest_time="$mtime"
                             latest_dir="$dir"
@@ -190,12 +190,12 @@ find_cuis_in_current_dir() {
         fi
     done
     shopt -u nullglob
-    
+
     if [[ -n "$latest_dir" ]]; then
         echo "$(pwd)/$latest_dir"
         return 0
     fi
-    
+
     return 1
 }
 
@@ -263,7 +263,6 @@ download_cuis() {
         cd "$original_dir"
         log_success "Cuis ${version} installed successfully to ${install_dir}"
 
-
         # Register files
         local files=()
         for f in CuisImage/*.image CuisImage/*.changes CuisImage/*.sources RunCuisOn*.sh RunCuisOn*.bat CuisVM.app; do
@@ -284,24 +283,24 @@ download_cuis() {
 run_cuis() {
     local cuis_dir
     local original_dir="$(pwd)"
-    
+
     # First try current directory, then search common locations
-    cuis_dir=$(find_cuis_in_current_dir 2>/dev/null) || cuis_dir=$(is_cuis_installed 2>/dev/null) || true
-    
+    cuis_dir=$(find_cuis_in_current_dir 2> /dev/null) || cuis_dir=$(is_cuis_installed 2> /dev/null) || true
+
     # If not found, create installation
     if [[ -z "$cuis_dir" ]]; then
         log_info "No Cuis installation found. Creating new installation..."
-        
+
         # Create timestamped directory
         local timestamp
         timestamp=$(date +%Y%m%d_%H%M%S)
         local install_dir="Cuis-${CUIS_VERSION}_${timestamp}"
-        
+
         mkdir -p "$install_dir"
         cd "$install_dir" || die "Cannot create directory: $install_dir"
-        
+
         download_cuis "$CUIS_VERSION" "."
-        
+
         # Verify installation - check for launch scripts
         local has_launcher=false
         shopt -s nullglob
@@ -312,30 +311,30 @@ run_cuis() {
             fi
         done
         shopt -u nullglob
-        
+
         if ! $has_launcher; then
             die "Cuis installation failed - no launch scripts found"
         fi
-        
+
         cuis_dir="$(pwd)"
         log_success "Cuis installed to: $cuis_dir"
     else
         cd "$cuis_dir" || die "Cannot change to Cuis directory: $cuis_dir"
     fi
-    
+
     # Launch based on OS
     local os_type
     os_type=$(get_os)
-    
+
     case "$os_type" in
         macos)
             # Cuis provides platform-specific launch scripts
             # Check in root directory first, then in CuisImage for Cuis7-6-main style
             if [[ -f "./RunCuisOnMac.sh" ]]; then
-                chmod +x ./RunCuisOnMac.sh 2>/dev/null || true
+                chmod +x ./RunCuisOnMac.sh 2> /dev/null || true
                 ./RunCuisOnMac.sh
             elif [[ -f "./CuisImage/RunCuisOnMac.sh" ]]; then
-                chmod +x ./CuisImage/RunCuisOnMac.sh 2>/dev/null || true
+                chmod +x ./CuisImage/RunCuisOnMac.sh 2> /dev/null || true
                 ./CuisImage/RunCuisOnMac.sh
             elif [[ -f "./CuisVM.app" ]]; then
                 open ./CuisVM.app
@@ -345,10 +344,10 @@ run_cuis() {
             ;;
         linux)
             if [[ -f "./RunCuisOnLinux.sh" ]]; then
-                chmod +x ./RunCuisOnLinux.sh 2>/dev/null || true
+                chmod +x ./RunCuisOnLinux.sh 2> /dev/null || true
                 ./RunCuisOnLinux.sh
             elif [[ -f "./CuisImage/RunCuisOnLinux.sh" ]]; then
-                chmod +x ./CuisImage/RunCuisOnLinux.sh 2>/dev/null || true
+                chmod +x ./CuisImage/RunCuisOnLinux.sh 2> /dev/null || true
                 ./CuisImage/RunCuisOnLinux.sh
             else
                 die "Cannot find Cuis executable for Linux (RunCuisOnLinux.sh)"
@@ -367,8 +366,50 @@ run_cuis() {
             die "Unsupported OS: $os_type"
             ;;
     esac
-    
+
     log_info "Cuis launched from: $cuis_dir"
+}
+
+#################################
+## Shared install-or-find helper
+#################################
+
+# Find an existing Cuis installation (current dir or common locations), or
+# download one into a timestamped directory if none is found. On success CWD is
+# the Cuis install dir and the global _CUIS_DIR holds its path. Used by the
+# headless handlers (eval) so they auto-install instead of erroring, consistent
+# with `st cuis run`, `st pharo eval`, and `st ls4 eval`. Must be called WITHOUT
+# command substitution so the `cd` persists.
+ensure_cuis_dir() {
+    _CUIS_DIR=""
+    local cuis_dir
+    cuis_dir=$(find_cuis_in_current_dir 2> /dev/null) || cuis_dir=$(is_cuis_installed 2> /dev/null) || true
+
+    if [[ -n "$cuis_dir" ]]; then
+        cd "$cuis_dir" || die "Cannot change to Cuis directory: $cuis_dir"
+        _CUIS_DIR="$(pwd)"
+        return 0
+    fi
+
+    log_info "No Cuis installation found. Installing Cuis ${CUIS_VERSION}..."
+    local timestamp install_dir
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    install_dir="Cuis-${CUIS_VERSION}_${timestamp}"
+    mkdir -p "$install_dir"
+    cd "$install_dir" || die "Cannot change to directory: $install_dir"
+    download_cuis "$CUIS_VERSION" "."
+    local has_launcher=false
+    shopt -s nullglob
+    for f in RunCuisOn*.sh RunCuisOn*.bat; do
+        if [[ -f "$f" ]]; then
+                               has_launcher=true
+                                                  break
+        fi
+    done
+    shopt -u nullglob
+    if ! $has_launcher; then die "Cuis installation failed - no launch scripts found"; fi
+    _CUIS_DIR="$(pwd)"
+    log_success "Cuis installed to: $_CUIS_DIR"
 }
 
 #################################
@@ -379,7 +420,6 @@ smalltalk_cuis_help() {
     load_help_from_doc "cuis"
 }
 
-
 smalltalk_cuis_install() {
     local version="$CUIS_VERSION"
     local install_dir="."
@@ -387,11 +427,11 @@ smalltalk_cuis_install() {
     # Parse options
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -d|--dir)
+            -d | --dir)
                 install_dir="$2"
                 shift 2
                 ;;
-            -h|--help)
+            -h | --help)
                 smalltalk_cuis_help
                 return 0
                 ;;
@@ -409,7 +449,7 @@ smalltalk_cuis_install() {
 
     # Validate version
     case "$version" in
-        stable|latest|7.0|7.0*|6.0|6.0*)
+        stable | latest | 7.0 | 7.0* | 6.0 | 6.0*)
             ;;
         help)
             list_cuis_versions
@@ -466,7 +506,7 @@ smalltalk_cuis_search() {
 
     if download_file "$api_url" "$cache_file"; then
         if cmd_exists jq; then
-            jq -r '.items[] | "\(.full_name) - \(.description // "No description")"' "$cache_file" 2>/dev/null || {
+            jq -r '.items[] | "\(.full_name) - \(.description // "No description")"' "$cache_file" 2> /dev/null || {
                 log_error "Failed to parse search results"
                 return 1
             }
@@ -510,7 +550,7 @@ smalltalk_cuis_clean_artifacts() {
         )
 
         for pattern in "${patterns[@]}"; do
-            find . -maxdepth 1 -name "$pattern" -exec rm -rf -- {} \; 2>/dev/null || true
+            find . -maxdepth 1 -name "$pattern" -exec rm -rf -- {} \; 2> /dev/null || true
         done
 
         manifest_remove "cuis"
@@ -528,12 +568,11 @@ smalltalk_cuis_version() {
         return 1
     }
 
-
     cd "$cuis_dir" || return 1
 
     # Try to get version from image
     if [[ -f "./run_cuis.sh" ]]; then
-        grep -oP 'version \K[0-9.]+' ./run_cuis.sh 2>/dev/null || echo "Cuis (version unknown)"
+        grep -oP 'version \K[0-9.]+' ./run_cuis.sh 2> /dev/null || echo "Cuis (version unknown)"
     else
         echo "Cuis (installed at $cuis_dir)"
     fi
@@ -541,26 +580,19 @@ smalltalk_cuis_version() {
 
 smalltalk_cuis_eval() {
     local code="$*"
-    
+
     if [[ -z "$code" ]]; then
         log_error "Please provide code to evaluate"
         echo "Usage: st cuis eval '<code>'"
         return 1
     fi
-    
-    local cuis_dir
-    cuis_dir=$(is_cuis_installed) || {
-        log_error "Cuis is not installed"
-        log_error "Run 'st cuis install' first"
-        return 1
-    }
-    
-    cd "$cuis_dir" || return 1
-    
+
+    ensure_cuis_dir
+
     if [[ -f "./run_cuis.sh" ]]; then
         ./run_cuis.sh eval "$code"
     else
-        log_error "Cuis executable not found in: $cuis_dir"
+        log_error "Cuis executable not found in: $_CUIS_DIR"
         return 1
     fi
 }

@@ -47,7 +47,7 @@ NO_WAIT="${DEMO_NO_WAIT:-false}"
 PROMPT_TIMEOUT="${DEMO_TIMEOUT:-0}"
 
 _demo_usage() {
-    cat <<EOF
+    cat << EOF
 Usage: $(basename -- "$0") [options]
 
 Playback options:
@@ -64,14 +64,40 @@ EOF
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -d|--debug)   TYPE_SPEED=""; shift ;;
-        -n|--no-wait) NO_WAIT="true"; shift ;;
-        -w|--wait)    PROMPT_TIMEOUT="${2:?--wait requires a number}"; shift 2 ;;
-        -t|--type)    TYPE_SPEED="${2:?--type requires a number}"; shift 2 ;;
-        --fast)       TYPE_SPEED=""; NO_WAIT="true"; shift ;;
-        -h|--help)    _demo_usage; exit 0 ;;
-        --)           shift; break ;;
-        *) printf 'demo-cmds: unknown option: %s\n' "$1" >&2; _demo_usage; exit 2 ;;
+        -d | --debug)
+                      TYPE_SPEED=""
+                                     shift
+                                           ;;
+        -n | --no-wait)
+                      NO_WAIT="true"
+                                      shift
+                                            ;;
+        -w | --wait)
+                      PROMPT_TIMEOUT="${2:?--wait requires a number}"
+                                                                       shift 2
+                                                                               ;;
+        -t | --type)
+                      TYPE_SPEED="${2:?--type requires a number}"
+                                                                   shift 2
+                                                                           ;;
+        --fast)
+                      TYPE_SPEED=""
+                                     NO_WAIT="true"
+                                                     shift
+                                                           ;;
+        -h | --help)
+                      _demo_usage
+                                   exit 0
+                                          ;;
+        --)
+                      shift
+                             break
+                                   ;;
+        *)
+            printf 'demo-cmds: unknown option: %s\n' "$1" >&2
+                                                              _demo_usage
+                                                                           exit 2
+                                                                                  ;;
     esac
 done
 # 0 typing speed => instant (pv with -qL 0 would hang, so clear it instead).

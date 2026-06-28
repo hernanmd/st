@@ -12,10 +12,10 @@ st [-x] gt <command> [options]
 |---------|-------------|
 | `install [-d dir]` | Install Glamorous Toolkit to the specified directory |
 | `run [-d dir]` | Launch the GT UI |
-| `eval '<code>'` | Evaluate Smalltalk code (headless) |
-| `load <file.st>` | Load and execute a .st source file |
-| `save [name]` | Save the GT image |
-| `metacello <spec>` | Install a Metacello baseline/configuration |
+| `eval '<code>'` | Evaluate Smalltalk code (headless); installs GT if not present |
+| `load <file.st>` | Load and execute a .st source file; installs GT if not present |
+| `save [name]` | Save the GT image; installs GT if not present |
+| `metacello <spec>` | Install a Metacello baseline/configuration; installs GT if not present |
 | `search <term>` | Search for packages |
 | `list` | List available packages |
 | `update` | Update package information |
@@ -23,6 +23,20 @@ st [-x] gt <command> [options]
 | `clean-artifacts` | Clean installed artifacts |
 | `version` | Show GT version |
 | `help` | Show this help message |
+
+## Clap Commands
+
+Glamorous Toolkit ships with Pharo's command-line handler
+([Clap](https://github.com/pharo-project/pharo)), exposing headless subcommands run
+against the GT image. These back the `st gt` commands `eval`, `load`, `save`, and
+`metacello` (which install Glamorous Toolkit automatically if no image is present):
+
+| Clap command | `st gt` equivalent | Description |
+|--------------|--------------------|-------------|
+| `eval <code>` | `st gt eval '<code>'` | Evaluate Smalltalk code headless (e.g. `42 inspect`) |
+| `st <file.st>` | `st gt load <file.st>` | Load and execute a .st source file |
+| `save [name]` | `st gt save [name]` | Save the GT image |
+| `metacello <spec>` | `st gt metacello <spec>` | Load a Metacello baseline/configuration |
 
 ## Options
 

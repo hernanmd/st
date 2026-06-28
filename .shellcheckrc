@@ -4,19 +4,28 @@
 # Enable all optional checks
 enable=all
 
-# Allow sourcing non-constant paths (libexec pattern)
+# Follow sourced files for analysis
 external-sources=true
 
-# Allow unquoted variables in printf format strings
-# (used in logging functions where format is intentional)
+# Source path for resolving sourced files
 source-path=libexec
 
-# Suppress warnings for scripts that intentionally use set +e
-# (install.sh needs to continue on certain errors)
-
-# Project-specific: Allow SC1090 (sourcing dynamic paths)
-# We source libexec scripts based on implementation name
-# shellcheck disable=SC1090
-
-# Allow reading from /tmp (temp file pattern used throughout)
-# shellcheck disable=SC2154
+# ---------------------------------------------------------------------------
+# Project-wide disables (justified):
+#
+# SC2164 - "cd without || exit": many `cd "$original_dir"` CWD-restore
+#          statements in the download_* functions; a failed restore is
+#          non-critical (the operation already succeeded or failed separately).
+#
+# SC2034 - "unused variable": config constants (EXIT_SUCCESS/EXIT_ERROR/
+#          EXIT_UNSUPPORTED, DEFAULT_IMAGE_NAME, PHARO_URL_BASE, PROJECT_ROOT_DIR,
+#          etc.) are kept for API stability and future use.
+#
+# SC2155 - "declare and assign separately": `local var="$(pwd|date ...)"` patterns
+#          where the command does not fail in practice (pwd/date).
+#
+# SC2120 - "references arguments, but none are ever passed": false positive caused
+#          by dynamic dispatch in bin/st (e.g. smalltalk_gnu_install receives args
+#          via `"smalltalk_${impl}_${cmd}" "${@:3}"` which ShellCheck cannot see).
+# ---------------------------------------------------------------------------
+disable=SC2164,SC2034,SC2155,SC2120

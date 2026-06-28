@@ -30,7 +30,7 @@ parse_install_options() {
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -d|--dir)
+            -d | --dir)
                 install_dir="$2"
                 shift 2
                 ;;
@@ -66,7 +66,7 @@ set_pharo_url() {
     # get.pharo.org automatically detects architecture
     # For ARM64 Macs, ensure we get ARM64-compatible binaries
     case "$os_type" in
-        macos|linux|windows)
+        macos | linux | windows)
             PHARO_URL="https://get.pharo.org/${version}+vm/"
             ;;
         *)
@@ -82,7 +82,7 @@ is_pharo_installed() {
         echo "$(pwd)"
         return 0
     fi
-    
+
     # Check for timestamped directories in current directory (e.g., Pharo-13_20240410_220002)
     for dir in Pharo-*; do
         if [[ -d "$dir" ]] && [[ -f "${dir}/Pharo.image" ]] && [[ -f "${dir}/Pharo.changes" ]]; then
@@ -90,7 +90,7 @@ is_pharo_installed() {
             return 0
         fi
     done
-    
+
     # Check for Pharo in common locations
     local search_dirs=("$HOME/pharo" "$HOME/.local/share/pharo" "$HOME/Pharo")
     for dir in "${search_dirs[@]}"; do
@@ -106,7 +106,7 @@ is_pharo_installed() {
             fi
         done
     done
-    
+
     return 1
 }
 
@@ -117,17 +117,17 @@ find_pharo_in_current_dir() {
         echo "$(pwd)"
         return 0
     fi
-    
+
     # Check for timestamped directories (Pharo-13_YYYYMMDD_HHMMSS)
     local latest_dir=""
     local latest_time=0
-    
+
     shopt -s nullglob
     for dir in Pharo-*; do
         if [[ -d "$dir" ]] && [[ -f "${dir}/Pharo.image" ]]; then
             # Get modification time to find most recent
             local mtime
-            mtime=$(stat -f %m "$dir" 2>/dev/null || stat -c %Y "$dir" 2>/dev/null || echo 0)
+            mtime=$(stat -f %m "$dir" 2> /dev/null || stat -c %Y "$dir" 2> /dev/null || echo 0)
             if [[ "$mtime" -gt "$latest_time" ]]; then
                 latest_time="$mtime"
                 latest_dir="$dir"
@@ -135,12 +135,12 @@ find_pharo_in_current_dir() {
         fi
     done
     shopt -u nullglob
-    
+
     if [[ -n "$latest_dir" ]]; then
         echo "$(pwd)/$latest_dir"
         return 0
     fi
-    
+
     return 1
 }
 
@@ -150,7 +150,7 @@ download_pharo() {
     local install_dir="${2:-.}"
     local os_type
     local arch
-    
+
     os_type=$(get_os)
     arch=$(get_arch)
 
@@ -163,14 +163,14 @@ download_pharo() {
 
     # Clear any existing installation to ensure fresh download
     log_debug "Cleaning existing installation files..."
-    rm -rf -- Pharo*.image Pharo*.changes Pharo*.sources pharo pharo-ui pharo-vm Pharo.app 2>/dev/null || true
+    rm -rf -- Pharo*.image Pharo*.changes Pharo*.sources pharo pharo-ui pharo-vm Pharo.app 2> /dev/null || true
 
     # Determine architecture bits for get.pharo.org URL pattern
     # get.pharo.org/64/ for 64-bit (x86_64, arm64, aarch64)
     # get.pharo.org/32/ for 32-bit (i386, i686)
     local arch_bits=64
     case "$arch" in
-        i386|i686|armv7|arm32)
+        i386 | i686 | armv7 | arm32)
             arch_bits=32
             ;;
         *)
@@ -178,15 +178,15 @@ download_pharo() {
             arch_bits=64
             ;;
     esac
-    
+
     # Use get.pharo.org installer with explicit architecture bits
     # Pattern: get.pharo.org/<arch_bits>/<version>+vm
     log_info "Running Pharo installer (${arch_bits}-bit for ${arch} on ${os_type})..."
-    
+
     if cmd_exists curl; then
-        curl -fsSL "https://get.pharo.org/${arch_bits}/${version}+vm" 2>/dev/null | bash
+        curl -fsSL "https://get.pharo.org/${arch_bits}/${version}+vm" 2> /dev/null | bash
     elif cmd_exists wget; then
-        wget -qO- "https://get.pharo.org/${arch_bits}/${version}+vm" 2>/dev/null | bash
+        wget -qO- "https://get.pharo.org/${arch_bits}/${version}+vm" 2> /dev/null | bash
     else
         die "Neither curl nor wget is installed"
     fi
@@ -198,12 +198,12 @@ download_pharo() {
         for vm_path in ./pharo-vm/Pharo.app/Contents/MacOS/Pharo ./pharo ./Pharo.app/Contents/MacOS/Pharo; do
             if [[ -f "$vm_path" ]]; then
                 local vm_arch
-                vm_arch=$(file "$vm_path" 2>/dev/null | grep -oE 'x86_64|arm64|i386' | head -1)
+                vm_arch=$(file "$vm_path" 2> /dev/null | grep -oE 'x86_64|arm64|i386' | head -1)
                 log_debug "VM at $vm_path: $vm_arch"
                 break
             fi
         done
-        
+
         log_success "Pharo ${version} installed successfully to ${install_dir}"
 
         # Register installed files
@@ -227,17 +227,17 @@ download_pharo() {
 download_pharo_alternative() {
     local version="${1:-$PHARO_VERSION}"
     local install_dir="${2:-.}"
-    
+
     local os_type
     local arch
     os_type=$(get_os)
     arch=$(get_arch)
-    
+
     local download_url
     local archive_name="pharo.zip"
     local temp_dir
     temp_dir=$(make_temp_dir pharo)
-    
+
     # Construct architecture-specific URL
     # Note: Pharo GitHub releases use different naming conventions
     case "$os_type" in
@@ -259,9 +259,9 @@ download_pharo_alternative() {
             die "Unsupported OS: $os_type"
             ;;
     esac
-    
+
     log_info "Alternative download from: $download_url"
-    
+
     if download_file "$download_url" "${temp_dir}/${archive_name}"; then
         extract_archive "${temp_dir}/${archive_name}" "$install_dir"
         rm -rf -- "$temp_dir"
@@ -276,51 +276,51 @@ download_pharo_alternative() {
 run_pharo() {
     local pharo_dir
     local original_dir="$(pwd)"
-    
+
     # First try to find existing Pharo installation
-    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
-    
+    pharo_dir=$(find_pharo_in_current_dir 2> /dev/null) || pharo_dir=$(is_pharo_installed 2> /dev/null) || true
+
     # If not found, offer to install
     if [[ -z "$pharo_dir" ]]; then
         log_warn "No Pharo installation found in current directory or common locations"
         log_info "Creating a new Pharo installation..."
-        
+
         # Create timestamped directory
         local timestamp
         timestamp=$(date +%Y%m%d_%H%M%S)
         local install_dir="Pharo-${PHARO_VERSION}_${timestamp}"
-        
+
         mkdir -p "$install_dir"
         cd "$install_dir" || die "Cannot change to directory: $install_dir"
-        
+
         download_pharo "$PHARO_VERSION" "."
-        
+
         # Verify installation
         if [[ ! -f "./Pharo.image" ]]; then
             die "Pharo installation failed - no image file found"
         fi
-        
+
         pharo_dir="$(pwd)"
         log_success "Pharo installed to: $pharo_dir"
     else
         cd "$pharo_dir" || die "Cannot change to Pharo directory: $pharo_dir"
     fi
-    
+
     # Determine how to run based on OS and available executables
     local os_type
     os_type=$(get_os)
-    
+
     case "$os_type" in
         macos)
             # Try pharo-ui script first (get.pharo.org provides correct architecture)
             if [[ -f "./pharo-ui" ]]; then
-                chmod +x ./pharo-ui 2>/dev/null || true
+                chmod +x ./pharo-ui 2> /dev/null || true
                 log_info "Launching Pharo..."
                 ./pharo-ui &
             elif [[ -f "./Pharo.app/Contents/MacOS/Pharo" ]]; then
                 open ./Pharo.app
             elif [[ -f "./pharo" ]]; then
-                chmod +x ./pharo 2>/dev/null || true
+                chmod +x ./pharo 2> /dev/null || true
                 ./pharo --interactive &
             else
                 die "Cannot find Pharo executable in $pharo_dir"
@@ -328,10 +328,10 @@ run_pharo() {
             ;;
         linux)
             if [[ -f "./pharo-ui" ]]; then
-                chmod +x ./pharo-ui 2>/dev/null || true
+                chmod +x ./pharo-ui 2> /dev/null || true
                 ./pharo-ui &
             elif [[ -f "./pharo" ]]; then
-                chmod +x ./pharo 2>/dev/null || true
+                chmod +x ./pharo 2> /dev/null || true
                 ./pharo --interactive &
             else
                 die "Cannot find Pharo executable in $pharo_dir"
@@ -341,7 +341,7 @@ run_pharo() {
             if [[ -f "./Pharo.exe" ]]; then
                 ./Pharo.exe &
             elif [[ -f "./pharo-ui" ]]; then
-                chmod +x ./pharo-ui 2>/dev/null || true
+                chmod +x ./pharo-ui 2> /dev/null || true
                 ./pharo-ui &
             else
                 die "Cannot find Pharo executable in $pharo_dir"
@@ -351,7 +351,7 @@ run_pharo() {
             die "Unsupported OS: $os_type"
             ;;
     esac
-    
+
     log_info "Pharo launched from: $pharo_dir"
 }
 
@@ -372,7 +372,7 @@ search_pharo_packages() {
 
     if download_file "$api_url" "$cache_file"; then
         if cmd_exists jq; then
-            jq -r '.items[] | "\(.full_name) - \(.description // "No description")"' "$cache_file" 2>/dev/null || {
+            jq -r '.items[] | "\(.full_name) - \(.description // "No description")"' "$cache_file" 2> /dev/null || {
                 log_error "Failed to parse search results"
                 return 1
             }
@@ -442,15 +442,15 @@ install_pharo_package() {
     local readme_file="$temp_dir/$repo/README.md"
     if [[ -f "$readme_file" ]]; then
         # Look for Smalltalk code blocks
-        install_expr=$(grep -A 20 '^```smalltalk' "$readme_file" 2>/dev/null | grep -v '^```' | head -1 || true)
+        install_expr=$(grep -A 20 '^```smalltalk' "$readme_file" 2> /dev/null | grep -v '^```' | head -1 || true)
         if [[ -z "$install_expr" ]]; then
-            install_expr=$(grep -A 20 '^```st' "$readme_file" 2>/dev/null | grep -v '^```' | head -1 || true)
+            install_expr=$(grep -A 20 '^```st' "$readme_file" 2> /dev/null | grep -v '^```' | head -1 || true)
         fi
     fi
 
     if [[ -n "$install_expr" ]]; then
         log_info "Installing package with: $install_expr"
-        ./pharo-ui --headless "$PHARO_IMAGE_NAME" eval --save "$install_expr" 2>/dev/null || {
+        ./pharo-ui --headless "$PHARO_IMAGE_NAME" eval --save "$install_expr" 2> /dev/null || {
             log_error "Failed to install package"
             rm -rf -- "$temp_dir"
             return 1
@@ -467,13 +467,47 @@ install_pharo_package() {
 }
 
 #################################
+## Shared install-or-find helper
+#################################
+
+# Find an existing Pharo installation (current dir or common locations), or
+# download one into a timestamped directory if none is found. On success the
+# current working directory is the Pharo install dir and the global _PHARO_DIR
+# holds its path. Used by the headless handlers (eval/metacello/load/save/fuel)
+# so they auto-install instead of erroring, consistent with `st pharo run` and
+# `st ls4 eval`. Must be called WITHOUT command substitution so the `cd` persists.
+ensure_pharo_dir() {
+    _PHARO_DIR=""
+    local pharo_dir
+    pharo_dir=$(find_pharo_in_current_dir 2> /dev/null) || pharo_dir=$(is_pharo_installed 2> /dev/null) || true
+
+    if [[ -n "$pharo_dir" ]]; then
+        cd "$pharo_dir" || die "Cannot change to Pharo directory: $pharo_dir"
+        _PHARO_DIR="$(pwd)"
+        return 0
+    fi
+
+    log_info "No Pharo installation found. Installing Pharo ${PHARO_VERSION}..."
+    local timestamp install_dir
+    timestamp=$(date +%Y%m%d_%H%M%S)
+    install_dir="Pharo-${PHARO_VERSION}_${timestamp}"
+    mkdir -p "$install_dir"
+    cd "$install_dir" || die "Cannot change to directory: $install_dir"
+    download_pharo "$PHARO_VERSION" "."
+    if [[ ! -f "./Pharo.image" ]]; then
+        die "Pharo installation failed - no image file found"
+    fi
+    _PHARO_DIR="$(pwd)"
+    log_success "Pharo installed to: $_PHARO_DIR"
+}
+
+#################################
 ## Command Handlers
 #################################
 
 smalltalk_pharo_help() {
     load_help_from_doc "pharo"
 }
-
 
 smalltalk_pharo_install() {
     local install_dir="."
@@ -482,7 +516,7 @@ smalltalk_pharo_install() {
     # Parse options - -d flag for directory, everything else is packages
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -d|--dir)
+            -d | --dir)
                 if [[ -n "${2:-}" ]]; then
                     install_dir="$2"
                     shift 2
@@ -492,7 +526,7 @@ smalltalk_pharo_install() {
                     return 1
                 fi
                 ;;
-            -h|--help)
+            -h | --help)
                 smalltalk_pharo_help
                 return 0
                 ;;
@@ -541,7 +575,7 @@ smalltalk_pharo_install() {
     fi
 
     download_pharo "$PHARO_VERSION" "$install_dir"
-    
+
     # After installing Pharo, install any packages specified
     if [[ ${#packages[@]} -gt 0 ]]; then
         for pkg in "${packages[@]}"; do
@@ -553,28 +587,28 @@ smalltalk_pharo_install() {
 smalltalk_pharo_run() {
     local pharo_dir
     local original_dir="$(pwd)"
-    
+
     # First try current directory, then search common locations
-    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
-    
+    pharo_dir=$(find_pharo_in_current_dir 2> /dev/null) || pharo_dir=$(is_pharo_installed 2> /dev/null) || true
+
     # If not found, create installation and try again
     if [[ -z "$pharo_dir" ]]; then
         log_info "No Pharo installation found. Creating new installation..."
-        
+
         # Create timestamped directory
         local timestamp
         timestamp=$(date +%Y%m%d_%H%M%S)
         local install_dir="Pharo-${PHARO_VERSION}_${timestamp}"
-        
+
         mkdir -p "$install_dir"
         cd "$install_dir" || die "Cannot create directory: $install_dir"
-        
+
         download_pharo "$PHARO_VERSION" "."
-        
+
         if [[ ! -f "./Pharo.image" ]]; then
             die "Pharo installation failed - no image file found"
         fi
-        
+
         pharo_dir="$(pwd)"
         log_success "Pharo installed to: $pharo_dir"
     else
@@ -583,13 +617,13 @@ smalltalk_pharo_run() {
 
     # Launch the Pharo UI
     if [[ -f "./pharo-ui" ]]; then
-        chmod +x ./pharo-ui 2>/dev/null || true
+        chmod +x ./pharo-ui 2> /dev/null || true
         log_info "Launching Pharo from: $pharo_dir"
         ./pharo-ui &
     elif [[ -f "./Pharo.app/Contents/MacOS/Pharo" ]]; then
         open ./Pharo.app
     elif [[ -f "./pharo" ]]; then
-        chmod +x ./pharo 2>/dev/null || true
+        chmod +x ./pharo 2> /dev/null || true
         ./pharo --interactive &
     else
         die "Cannot find Pharo executable"
@@ -642,7 +676,7 @@ smalltalk_pharo_clean_artifacts() {
         )
 
         for pattern in "${patterns[@]}"; do
-            find . -maxdepth 1 -name "$pattern" -exec rm -rf -- {} \; 2>/dev/null || true
+            find . -maxdepth 1 -name "$pattern" -exec rm -rf -- {} \; 2> /dev/null || true
         done
 
         manifest_remove "pharo"
@@ -655,28 +689,19 @@ smalltalk_pharo_clean_artifacts() {
 
 smalltalk_pharo_eval() {
     local code="$*"
-    
+
     if [[ -z "$code" ]]; then
         log_error "Please provide code to evaluate"
         echo "Usage: st pharo eval '<code>'"
         return 1
     fi
-    
-    local pharo_dir
-    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
-    
-    if [[ -z "$pharo_dir" ]]; then
-        log_error "Pharo is not installed"
-        log_error "Run 'st pharo install' first"
-        return 1
-    fi
-    
-    cd "$pharo_dir" || return 1
-    
+
+    ensure_pharo_dir
+
     if [[ -f "./pharo" ]]; then
         ./pharo --headless Pharo.image eval "$code"
     else
-        log_error "Pharo executable not found in: $pharo_dir"
+        log_error "Pharo executable not found in: $_PHARO_DIR"
         return 1
     fi
 }
@@ -688,22 +713,13 @@ smalltalk_pharo_metacello() {
         echo "Usage: st pharo metacello <repo-url> <baseline-name>"
         return 1
     fi
-    
-    local pharo_dir
-    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
-    
-    if [[ -z "$pharo_dir" ]]; then
-        log_error "Pharo is not installed"
-        log_error "Run 'st pharo install' first"
-        return 1
-    fi
-    
-    cd "$pharo_dir" || return 1
-    
+
+    ensure_pharo_dir
+
     if [[ -f "./pharo" ]]; then
         ./pharo --headless Pharo.image metacello "$@" --save
     else
-        log_error "Pharo executable not found in: $pharo_dir"
+        log_error "Pharo executable not found in: $_PHARO_DIR"
         return 1
     fi
 }
@@ -711,28 +727,19 @@ smalltalk_pharo_metacello() {
 # Load and execute a .st source file
 smalltalk_pharo_load() {
     local st_file="${1:-}"
-    
+
     if [[ -z "$st_file" ]]; then
         log_error "Please provide a .st file to load"
         echo "Usage: st pharo load <file.st>"
         return 1
     fi
-    
-    local pharo_dir
-    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
-    
-    if [[ -z "$pharo_dir" ]]; then
-        log_error "Pharo is not installed"
-        log_error "Run 'st pharo install' first"
-        return 1
-    fi
-    
-    cd "$pharo_dir" || return 1
-    
+
+    ensure_pharo_dir
+
     if [[ -f "./pharo" ]]; then
         ./pharo --headless Pharo.image load "$st_file"
     else
-        log_error "Pharo executable not found in: $pharo_dir"
+        log_error "Pharo executable not found in: $_PHARO_DIR"
         return 1
     fi
 }
@@ -740,18 +747,9 @@ smalltalk_pharo_load() {
 # Save the Pharo image
 smalltalk_pharo_save() {
     local save_name="${1:-}"
-    
-    local pharo_dir
-    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
-    
-    if [[ -z "$pharo_dir" ]]; then
-        log_error "Pharo is not installed"
-        log_error "Run 'st pharo install' first"
-        return 1
-    fi
-    
-    cd "$pharo_dir" || return 1
-    
+
+    ensure_pharo_dir
+
     if [[ -f "./pharo" ]]; then
         if [[ -z "$save_name" ]]; then
             ./pharo --headless Pharo.image save
@@ -759,7 +757,7 @@ smalltalk_pharo_save() {
             ./pharo --headless Pharo.image save "$save_name"
         fi
     else
-        log_error "Pharo executable not found in: $pharo_dir"
+        log_error "Pharo executable not found in: $_PHARO_DIR"
         return 1
     fi
 }
@@ -767,49 +765,40 @@ smalltalk_pharo_save() {
 # Load a Fuel serialization file
 smalltalk_pharo_fuel() {
     local fuel_file="${1:-}"
-    
+
     if [[ -z "$fuel_file" ]]; then
         log_error "Please provide a Fuel file to load"
         echo "Usage: st pharo fuel <file.fuel>"
         return 1
     fi
-    
-    local pharo_dir
-    pharo_dir=$(find_pharo_in_current_dir 2>/dev/null) || pharo_dir=$(is_pharo_installed 2>/dev/null) || true
-    
-    if [[ -z "$pharo_dir" ]]; then
-        log_error "Pharo is not installed"
-        log_error "Run 'st pharo install' first"
-        return 1
-    fi
-    
-    cd "$pharo_dir" || return 1
-    
+
+    ensure_pharo_dir
+
     if [[ -f "./pharo" ]]; then
         ./pharo --headless Pharo.image fuel load "$fuel_file"
     else
-        log_error "Pharo executable not found in: $pharo_dir"
+        log_error "Pharo executable not found in: $_PHARO_DIR"
         return 1
     fi
 }
 
 smalltalk_pharo_versions() {
     log_info "Fetching available Pharo versions from get.pharo.org..."
-    
+
     local page_url="https://get.pharo.org/archive/80/"
     local versions
-    
+
     # Extract version numbers from URLs, filter to just base versions (no variants)
-    versions=$(curl -s "$page_url" 2>/dev/null | grep -o 'https://get\.pharo\.org/[^"'\'')<]*' | \
-        sed 's|https://get\.pharo\.org/||' | \
-        grep -oE '^[0-9]+[0-9\.]*' | \
-        sort -u -V -r || true)
-    
+    versions=$(curl -s "$page_url" 2> /dev/null | grep -o 'https://get\.pharo\.org/[^"'\'')<]*' \
+                                                                                               | sed 's|https://get\.pharo\.org/||' \
+                                           | grep -oE '^[0-9]+[0-9\.]*' \
+                                   | sort -u -V -r || true)
+
     if [[ -z "$versions" ]]; then
         log_error "Failed to fetch versions from get.pharo.org"
         return 1
     fi
-    
+
     echo "Available Pharo versions:"
     echo "$versions" | while IFS= read -r version; do
         echo "  $version"
@@ -825,7 +814,7 @@ smalltalk_pharo_version() {
 
     cd "$pharo_dir" || return 1
     if [[ -f "./pharo" ]]; then
-        ./pharo --version 2>/dev/null || echo "Pharo ${PHARO_VERSION}"
+        ./pharo --version 2> /dev/null || echo "Pharo ${PHARO_VERSION}"
     else
         echo "Pharo ${PHARO_VERSION}"
     fi

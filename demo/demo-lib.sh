@@ -43,29 +43,29 @@ source "$DEMO_DIR/demo-magic.sh"
 #   0 on success, 1 if the script cannot be found.
 ##
 detect_main_script() {
-	local name="${1:-st}"
-	local local_bin="$DEMO_DIR/../bin/$name"
-	local resolved=""
+    local name="${1:-st}"
+    local local_bin="$DEMO_DIR/../bin/$name"
+    local resolved=""
 
-	if [[ -x "$local_bin" ]]; then
-		resolved="$(cd -- "$(dirname -- "$local_bin")" && pwd -P)/$(basename -- "$local_bin")"
-	elif command -v "$name" >/dev/null 2>&1; then
-		resolved="$(command -v "$name")"
-	else
-		printf 'demo-lib: cannot detect main script "%s"\n' "$name" >&2
-		printf '  looked for: %s\n' "$local_bin" >&2
-		printf '  and on PATH: %s\n' "$name" >&2
-		return 1
-	fi
+    if [[ -x "$local_bin" ]]; then
+        resolved="$(cd -- "$(dirname -- "$local_bin")" && pwd -P)/$(basename -- "$local_bin")"
+    elif command -v "$name" > /dev/null 2>&1; then
+        resolved="$(command -v "$name")"
+    else
+        printf 'demo-lib: cannot detect main script "%s"\n' "$name" >&2
+        printf '  looked for: %s\n' "$local_bin" >&2
+        printf '  and on PATH: %s\n' "$name" >&2
+        return 1
+    fi
 
-	# Export an uppercased <NAME>_CMD variable so demo scripts can use $ST_CMD, $PI_CMD, ...
-	local var_name
-	var_name="$(printf '%s' "$name" | tr '[:lower:]-' '[:upper:]_')_CMD"
-	# shellcheck disable=SC2229
-	declare -g "$var_name=$resolved"
-	printf -v "$var_name" '%s' "$resolved"
-	export "${var_name?}"
-	printf '%s\n' "$resolved"
+    # Export an uppercased <NAME>_CMD variable so demo scripts can use $ST_CMD, $PI_CMD, ...
+    local var_name
+    var_name="$(printf '%s' "$name" | tr '[:lower:]-' '[:upper:]_')_CMD"
+    # shellcheck disable=SC2229
+    declare -g "$var_name=$resolved"
+    printf -v "$var_name" '%s' "$resolved"
+    export "${var_name?}"
+    printf '%s\n' "$resolved"
 }
 
 # Default: detect the st project main script and export ST_CMD.
