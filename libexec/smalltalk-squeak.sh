@@ -2,9 +2,10 @@
 #
 # smalltalk-squeak.sh - Squeak Smalltalk implementation
 #
-set -u
-set -o pipefail
+set -Euo pipefail
+IFS=$'\n\t'
 
+# shellcheck source=libexec/smalltalk-common.sh
 source "${BASH_SOURCE%/*}/smalltalk-common.sh"
 
 #################################
@@ -337,7 +338,7 @@ download_squeak() {
         log_error "Failed to download Squeak ${version}"
         log_error "The version may not be available, or the URL has changed."
         log_error "Try a different version or check https://files.squeak.org/"
-        rm -rf "$temp_dir"
+        rm -rf -- "$temp_dir"
         cd "$original_dir"
         return 1
     fi
@@ -345,7 +346,7 @@ download_squeak() {
     # Verify download
     if [[ ! -f "${temp_dir}/${archive_name}" ]]; then
         log_error "Download file not found"
-        rm -rf "$temp_dir"
+        rm -rf -- "$temp_dir"
         cd "$original_dir"
         return 1
     fi
@@ -355,7 +356,7 @@ download_squeak() {
     # Extract the ZIP file
     if ! extract_archive "${temp_dir}/${archive_name}" "$temp_dir"; then
         log_error "Failed to extract archive"
-        rm -rf "$temp_dir"
+        rm -rf -- "$temp_dir"
         cd "$original_dir"
         return 1
     fi
@@ -411,7 +412,7 @@ download_squeak() {
     fi
 
     # Cleanup temp directory
-    rm -rf "$temp_dir"
+    rm -rf -- "$temp_dir"
 
     # Final verification: check inside installed .app bundles
     if ! $found_image; then
@@ -820,7 +821,7 @@ smalltalk_squeak_clean_artifacts() {
         
         for pattern in "${patterns[@]}"; do
             for f in $pattern; do
-                rm -rf "$f" 2>/dev/null || true
+                rm -rf -- "$f" 2>/dev/null || true
             done
         done
         shopt -u nullglob

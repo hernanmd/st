@@ -2,9 +2,10 @@
 #
 # smalltalk-gnu.sh - GNU Smalltalk implementation
 #
-set -u
-set -o pipefail
+set -Euo pipefail
+IFS=$'\n\t'
 
+# shellcheck source=libexec/smalltalk-common.sh
 source "${BASH_SOURCE%/*}/smalltalk-common.sh"
 
 #################################
@@ -81,7 +82,7 @@ install_gnustack_from_source() {
     fi
 
     extract_archive "$archive_name" "."
-    rm -f "$archive_name"
+    rm -f -- "$archive_name"
 
     local source_dir="smalltalk-${GNUSTACK_VERSION}"
     if [[ ! -d "$source_dir" ]]; then
@@ -237,7 +238,7 @@ smalltalk_gnu_update() {
 
 smalltalk_gnu_clean() {
     if [[ -d "${GNUSTACK_CACHE_DIR}" ]]; then
-        rm -rf "${GNUSTACK_CACHE_DIR:?}"/*
+        rm -rf -- "${GNUSTACK_CACHE_DIR:?}"/*
         log_info "GNU Smalltalk cache cleaned"
     else
         log_info "GNU Smalltalk cache directory does not exist"
@@ -262,7 +263,7 @@ smalltalk_gnu_clean_artifacts() {
         )
 
         for pattern in "${patterns[@]}"; do
-            find . -maxdepth 2 -name "$pattern" -exec rm -rf {} \; 2>/dev/null || true
+            find . -maxdepth 2 -name "$pattern" -exec rm -rf -- {} \; 2>/dev/null || true
         done
 
         manifest_remove "gnu"

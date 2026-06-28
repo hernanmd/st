@@ -2,9 +2,10 @@
 #
 # smalltalk-gt.sh - Glamorous Toolkit implementation
 #
-set -u
-set -o pipefail
+set -Euo pipefail
+IFS=$'\n\t'
 
+# shellcheck source=libexec/smalltalk-common.sh
 source "${BASH_SOURCE%/*}/smalltalk-common.sh"
 
 #################################
@@ -111,7 +112,7 @@ download_gt() {
                     unzip $unzip_flags -o "$archive_file"
                 else
                     log_error "Neither bsdtar nor unzip is available"
-                    rm -f "$archive_file"
+                    rm -f -- "$archive_file"
                     return 1
                 fi
                 ;;
@@ -122,11 +123,11 @@ download_gt() {
         esac
     else
         log_error "Failed to download Glamorous Toolkit"
-        rm -f "$archive_file"
+        rm -f -- "$archive_file"
         return 1
     fi
 
-    rm -f "$archive_file"
+    rm -f -- "$archive_file"
 
     # Make the GlamorousToolkit executable if present
     if [[ -f "GlamorousToolkit.app/Contents/MacOS/GlamorousToolkit" ]]; then
@@ -330,7 +331,7 @@ smalltalk_gt_clean_artifacts() {
         )
 
         for pattern in "${patterns[@]}"; do
-            find . -maxdepth 1 -name "$pattern" -exec rm -rf {} \; 2>/dev/null || true
+            find . -maxdepth 1 -name "$pattern" -exec rm -rf -- {} \; 2>/dev/null || true
         done
 
         manifest_remove "gt"

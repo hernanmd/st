@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+#
+# runStCollectEnv - Collect system environment information for troubleshooting
+#
+# Lives in tests/. Usage: ./tests/runStCollectEnv
+#
+# Collects OS, shell, tool versions, display info, and other environment
+# details useful for bug reports.
+#
+# Exit codes:
+#   0 - Success
+#   1 - Error
+#
+set -Eeuo pipefail
+
+# --- Load helper functions ---
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd -P)"
+# shellcheck source=../helpers.sh
+source "${PROJECT_ROOT}/helpers.sh"
+
+# helpers.sh / smalltalk-common.sh do not define a section-header helper; provide one.
+# Writes to $output_file (set below) so it works inside the collection block.
+log_section() {
+    printf '\n=== %s ===\n' "$*" >> "$output_file"
+}
+
+printf "Collecting system information...\n"
+
+output_file="st_troubleshoot_$(date '+%Y%m%d_%H%M%S').txt"
+rm -f -- "$output_file"
+
+# Start collection
+{
+    printf "=== ST environment collection started at: %s ===\n" "$(date)"
+    printf "Hostname: %s\n" "$(hostname 2>/dev/null || printf 'unknown')"
+    printf "Script ran as: %s (uid=%s)\n" "$(whoami)" "$(id -u)"
+} >> "$output_file"
+
+{
+
+  log_section "OS and kernel details"
+  uname -a >> "$output_file" 2>&1
+  uname -m >> "$output_file" 2>&1   # architecture (x86_64 / arm64 / aarch64)
+
+  if [[ "$(uname)" == "Darwin" ]]; then
+      sw_vers >> "$output_file" 2>&1
+      sysctl -n hw.model hw.memsize hw.ncpu 2>/dev/null | sed 's/^/macOS sysctl: /' >> "$output_file" || true
+  elif [[ "$(uname)" == "Linux" ]]; then
+      if [[ -f /etc/os-release ]]; then
+          cat /etc/os-release >> "$output_file"
+      fi
+      cat /proc/version_signature /proc/cpuinfo 2>/dev/null | head -20 >> "$output_file" || true
+  fi
+
+  log_section "Current shell and shells"
+  printf 'SHELL=%s\n' "${SHELL:-unset}" >> "$output_file"
+  bash --version 2>&1 | head -3 >> "$output_file"
+  if cmd_exists zsh; then zsh --version 2>&1 | head -1 >> "$output_file"; else printf 'zsh: not found\n' >> "$output_file"; fi
+
+  log_section "User / groups / permissions"
+  id >> "$output_file" 2>&1
+  groups >> "$output_file" 2>&1
+
+  log_section "Resource limits (ulimit)"
+  ulimit -a >> "$output_file" 2>&1
+
+  log_section "Relevant environment variables (PATH, libs, display, locale)"
+  env | grep -E '^(PATH|HOME|USER|DISPLAY|WAYLAND_DISPLAY|XDG_|LANG|LC_|LD_LIBRARY_PATH|DYLD_|DYLD_FALLBACK_|GTK_|GDK_|QT_|SSL_|OPENSSL_)' | sort >> "$output_file" 2>&1 || true
+  # Explicit unset checks
+  if [[ -z "${LD_LIBRARY_PATH+x}" ]]; then printf 'LD_LIBRARY_PATH is unset\n'; else printf 'LD_LIBRARY_PATH=%s\n' "$LD_LIBRARY_PATH"; fi >> "$output_file"
+  if [[ -z "${DYLD_LIBRARY_PATH+x}" ]]; then printf 'DYLD_LIBRARY_PATH is unset\n'; else printf 'DYLD_LIBRARY_PATH=%s\n' "$DYLD_LIBRARY_PATH"; fi >> "$output_file"
+
+  log_section "Container / Docker detection"
+  if [[ "$(uname)" == "Linux" ]]; then
+      if [[ -f /.dockerenv ]] || grep -Eq 'docker|container|kubepod' /proc/1/cgroup 2>/dev/null; then
+          printf 'YES (docker/container detected)\n'
+      else
+          printf 'No\n'
+      fi >> "$output_file"
+  else
+      printf 'Not applicable (macOS)\n' >> "$output_file"
+  fi
+
+  log_section "git and curl"
+  if cmd_exists git; then git --version 2>&1; else printf 'git: not found\n'; fi >> "$output_file"
+  if cmd_exists curl; then curl --version 2>&1 | head -1; else printf 'curl: not found\n'; fi >> "$output_file"
+  if cmd_exists openssl; then openssl version 2>&1; else printf 'openssl: not found\n'; fi >> "$output_file"
+  if cmd_exists jq; then jq --version 2>&1; else printf 'jq: not found\n'; fi >> "$output_file"
+  if cmd_exists bats; then bats --version 2>&1; else printf 'bats: not found\n'; fi >> "$output_file"
+
+  log_section "Display / Graphics (critical for GT/Pharo UI launch)"
+  printf 'DISPLAY=%s\n' "${DISPLAY:-unset}" >> "$output_file"
+  printf 'WAYLAND_DISPLAY=%s\n' "${WAYLAND_DISPLAY:-unset}" >> "$output_file"
+  if [[ "$(uname)" == "Linux" ]]; then
+      printf 'XDG_SESSION_TYPE=%s\n' "${XDG_SESSION_TYPE:-unset}" >> "$output_file"
+      if cmd_exists xrandr; then xrandr --version 2>&1 | head -2 >> "$output_file"; fi
+      if cmd_exists glxinfo; then glxinfo | grep -E 'OpenGL version|renderer|vendor' 2>&1 | head -5 >> "$output_file" || printf 'glxinfo: failed (X11 not running?)\n' >> "$output_file"; fi
+      if cmd_exists lspci; then lspci | grep -Ei 'vga|3d|display' 2>&1 >> "$output_file" || true; fi
+  elif [[ "$(uname)" == "Darwin" ]]; then
+      if cmd_exists system_profiler; then
+          system_profiler SPDisplaysDataType 2>&1 | head -30 >> "$output_file" || true
+      fi
+  fi
+
+} >> "$output_file"
+
+printf "Wrote environment to %s. You can review the contents of that file\n" "$output_file"
+printf "and use it to populate the fields in the github issue template.\n"
+printf '\n'
+printf "cat %s\n" "$output_file"
+printf '\n'

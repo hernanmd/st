@@ -1,16 +1,36 @@
 {
   "name": "smalltalk",
-  "version": "0.1",
-  "description": "",
-  "main": "index.js",
-  "type": "module",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "release": "release-it"
-  },
-  "keywords": [],
+  "version": "1.0.0",
+  "description": "A unified CLI for installing and managing multiple Smalltalk implementations (Pharo, Cuis, GT, Squeak, GNU Smalltalk, LST, LS4)",
+  "keywords": [
+    "smalltalk",
+    "pharo",
+    "squeak",
+    "cuis",
+    "gtoolkit",
+    "gnu-smalltalk",
+    "cli",
+    "installer",
+    "package-manager"
+  ],
   "author": "Hernán Morales Durand",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hernanmd/st.git"
+  },
+  "bugs": {
+    "url": "https://github.com/hernanmd/st/issues"
+  },
+  "homepage": "https://github.com/hernanmd/st",
+  "type": "module",
+  "scripts": {
+    "test": "bats tests/",
+    "lint": "shellcheck --severity=warning --external-sources bin/st libexec/*.sh install.sh tests/runSmalltalkTests tests/runStCollectEnv helpers.sh",
+    "format:check": "shfmt -d -i 4 -ci -bn -sr -kp bin/st libexec/*.sh install.sh tests/runSmalltalkTests tests/runStCollectEnv helpers.sh",
+    "format": "shfmt -w -i 4 -ci -bn -sr -kp bin/st libexec/*.sh install.sh tests/runSmalltalkTests tests/runStCollectEnv helpers.sh",
+    "release": "release-it"
+  },
   "devDependencies": {
     "@release-it/conventional-changelog": "^1.1.0",
     "release-it": "^19.0.1"

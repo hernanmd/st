@@ -2,9 +2,10 @@
 #
 # smalltalk-cuis.sh - Cuis Smalltalk implementation
 #
-set -u
-set -o pipefail
+set -Euo pipefail
+IFS=$'\n\t'
 
+# shellcheck source=libexec/smalltalk-common.sh
 source "${BASH_SOURCE%/*}/smalltalk-common.sh"
 
 #################################
@@ -224,7 +225,7 @@ download_cuis() {
 
     if ! download_file "$download_url" "${temp_dir}/${archive_name}"; then
         log_error "Failed to download Cuis ${version}"
-        rm -rf "$temp_dir"
+        rm -rf -- "$temp_dir"
         cd "$original_dir"
         return 1
     fi
@@ -238,14 +239,14 @@ download_cuis() {
 
     if [[ -z "$extracted_dir" || ! -d "$extracted_dir" ]]; then
         log_error "Failed to extract Cuis archive"
-        rm -rf "$temp_dir"
+        rm -rf -- "$temp_dir"
         cd "$original_dir"
         return 1
     fi
 
     # Move contents to install_dir
     cp -r "$extracted_dir"/* .
-    rm -rf "$temp_dir"
+    rm -rf -- "$temp_dir"
 
     # Check for launch scripts (Cuis provides RunCuisOnMac.sh, RunCuisOnLinux.sh, RunCuisOnWindows.bat)
     local has_launcher=false
@@ -509,7 +510,7 @@ smalltalk_cuis_clean_artifacts() {
         )
 
         for pattern in "${patterns[@]}"; do
-            find . -maxdepth 1 -name "$pattern" -exec rm -rf {} \; 2>/dev/null || true
+            find . -maxdepth 1 -name "$pattern" -exec rm -rf -- {} \; 2>/dev/null || true
         done
 
         manifest_remove "cuis"

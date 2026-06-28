@@ -2,9 +2,10 @@
 #
 # smalltalk-lst.sh - Little Smalltalk v3 implementation
 #
-set -u
-set -o pipefail
+set -Euo pipefail
+IFS=$'\n\t'
 
+# shellcheck source=libexec/smalltalk-common.sh
 source "${BASH_SOURCE%/*}/smalltalk-common.sh"
 
 #################################
@@ -64,7 +65,7 @@ download_lst() {
     # Extract the archive
     log_info "Extracting archive..."
     extract_archive "$archive_name" "$install_dir"
-    rm -f "$archive_name"
+    rm -f -- "$archive_name"
 
     # The archive extracts to a directory like "lst3r-main"
     # Find the extracted directory
@@ -258,9 +259,9 @@ smalltalk_lst_clean_artifacts() {
         cd "$impl_dir" || return 1
 
         # Clean build artifacts but keep source
-        rm -f lst3r 2>/dev/null || true
-        rm -rf build 2>/dev/null || true
-        rm -f *.o *.a 2>/dev/null || true
+        rm -f -- lst3r 2>/dev/null || true
+        rm -rf -- build 2>/dev/null || true
+        rm -f -- *.o *.a 2>/dev/null || true
 
         manifest_remove "lst"
         log_success "Little Smalltalk build artifacts cleaned"

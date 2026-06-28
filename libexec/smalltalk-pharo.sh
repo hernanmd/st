@@ -2,9 +2,10 @@
 #
 # smalltalk-pharo.sh - Pharo Smalltalk implementation
 #
-set -u
-set -o pipefail
+set -Euo pipefail
+IFS=$'\n\t'
 
+# shellcheck source=libexec/smalltalk-common.sh
 source "${BASH_SOURCE%/*}/smalltalk-common.sh"
 
 #################################
@@ -162,7 +163,7 @@ download_pharo() {
 
     # Clear any existing installation to ensure fresh download
     log_debug "Cleaning existing installation files..."
-    rm -rf Pharo*.image Pharo*.changes Pharo*.sources pharo pharo-ui pharo-vm Pharo.app 2>/dev/null || true
+    rm -rf -- Pharo*.image Pharo*.changes Pharo*.sources pharo pharo-ui pharo-vm Pharo.app 2>/dev/null || true
 
     # Determine architecture bits for get.pharo.org URL pattern
     # get.pharo.org/64/ for 64-bit (x86_64, arm64, aarch64)
@@ -263,10 +264,10 @@ download_pharo_alternative() {
     
     if download_file "$download_url" "${temp_dir}/${archive_name}"; then
         extract_archive "${temp_dir}/${archive_name}" "$install_dir"
-        rm -rf "$temp_dir"
+        rm -rf -- "$temp_dir"
         log_success "Pharo ${version} installed successfully (via alternative method)"
     else
-        rm -rf "$temp_dir"
+        rm -rf -- "$temp_dir"
         die "Alternative download failed. Please check your internet connection and try again."
     fi
 }
@@ -451,7 +452,7 @@ install_pharo_package() {
         log_info "Installing package with: $install_expr"
         ./pharo-ui --headless "$PHARO_IMAGE_NAME" eval --save "$install_expr" 2>/dev/null || {
             log_error "Failed to install package"
-            rm -rf "$temp_dir"
+            rm -rf -- "$temp_dir"
             return 1
         }
     else
@@ -461,7 +462,7 @@ install_pharo_package() {
         return 1
     fi
 
-    rm -rf "$temp_dir"
+    rm -rf -- "$temp_dir"
     log_success "Package '$package_name' installed successfully"
 }
 
@@ -641,7 +642,7 @@ smalltalk_pharo_clean_artifacts() {
         )
 
         for pattern in "${patterns[@]}"; do
-            find . -maxdepth 1 -name "$pattern" -exec rm -rf {} \; 2>/dev/null || true
+            find . -maxdepth 1 -name "$pattern" -exec rm -rf -- {} \; 2>/dev/null || true
         done
 
         manifest_remove "pharo"

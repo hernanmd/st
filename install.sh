@@ -1,11 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # install.sh - Installer for Smalltalk CLI
-# 
+#
 # SECURITY NOTE: This script downloads code from GitHub and installs it.
 # We recommend verifying the checksum of downloaded files before installation.
 #
-# Usage: 
+# Usage:
 #   1. Download and verify: curl -fsSL https://raw.githubusercontent.com/hernanmd/st/master/install.sh -o install.sh
 #   2. Review: cat install.sh
 #   3. Run: bash install.sh
@@ -13,8 +13,14 @@
 # Or use with automatic verification:
 #   bash -c "$(curl -fsSL https://raw.githubusercontent.com/hernanmd/st/master/install.sh)"
 #
+# Exit codes:
+#   0 - Success
+#   1 - General error
+#
+set -Eeuo pipefail
 
-set -e
+# Prevent word splitting on spaces
+IFS=$'\n\t'
 
 { # Prevent execution if this script was only partially downloaded
 
@@ -42,25 +48,25 @@ require_util() {
 }
 
 log_info() {
-    printf "\033[1;34m[INFO]\033[0m %s\n" "$*"
+    printf '\033[1;34m[INFO]\033[0m %s\n' "$*"
 }
 
 log_success() {
-    printf "\033[1;32m[SUCCESS]\033[0m %s\n" "$*"
+    printf '\033[1;32m[SUCCESS]\033[0m %s\n' "$*"
 }
 
 log_warn() {
-    printf "\033[1;33m[WARN]\033[0m %s\n" "$*" >&2
+    printf '\033[1;33m[WARN]\033[0m %s\n' "$*" >&2
 }
 
 log_error() {
-    printf "\033[1;31m[ERROR]\033[0m %s\n" "$*" >&2
+    printf '\033[1;31m[ERROR]\033[0m %s\n' "$*" >&2
 }
 
 # Cleanup temporary files on exit
 cleanup() {
     if [[ -n "${tmpDir:-}" ]] && [[ -d "$tmpDir" ]]; then
-        rm -rf "$tmpDir"
+        rm -rf -- "$tmpDir"
     fi
 }
 
@@ -195,7 +201,6 @@ download_tarball() {
     
     # Construct download URL
     local url="https://github.com/${GITHUB_REPO}/archive/${version}.tar.gz"
-    
     log_info "Downloading ${SCRIPT_NAME} ${version}..."
     log_info "URL: $url"
     
@@ -267,14 +272,14 @@ do_install() {
     
     # Unpack
     log_info "Unpacking..."
-    (cd "$unpack" && tar -xzf "$tarball") || oops "Failed to unpack tarball"
+    (cd "$unpack" && tar -xzf -- "$tarball") || oops "Failed to unpack tarball"
     
     # Find the extracted directory (github archives include a prefix)
     local extracted_dir
     extracted_dir=$(find "$unpack" -maxdepth 1 -type d -name "smalltalk*" -o -name "st*" 2>/dev/null | head -1)
     
-    if [[ -n "$extracted_dir" ]] && [[ "$extracted_dir" != "$target_dir" ]]; then
-        mv "$extracted_dir" "$target_dir" 2>/dev/null || true
+    if [[ -n "${extracted_dir:-}" ]] && [[ "$extracted_dir" != "$target_dir" ]]; then
+        mv -- "$extracted_dir" "$target_dir" 2>/dev/null || true
     fi
     
     # Verify main script exists

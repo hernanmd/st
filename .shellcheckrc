@@ -1,0 +1,22 @@
+# ShellCheck configuration for st (Smalltalk Universal Installer)
+# See: https://github.com/koalaman/shellcheck
+
+# Enable all optional checks
+enable=all
+
+# Allow sourcing non-constant paths (libexec pattern)
+external-sources=true
+
+# Allow unquoted variables in printf format strings
+# (used in logging functions where format is intentional)
+source-path=libexec
+
+# Suppress warnings for scripts that intentionally use set +e
+# (install.sh needs to continue on certain errors)
+
+# Project-specific: Allow SC1090 (sourcing dynamic paths)
+# We source libexec scripts based on implementation name
+# shellcheck disable=SC1090
+
+# Allow reading from /tmp (temp file pattern used throughout)
+# shellcheck disable=SC2154

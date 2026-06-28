@@ -1,0 +1,17 @@
+# shfmt configuration for st (Smalltalk Universal Installer)
+# See: https://github.com/mvdan/sh
+
+# Indent with 4 spaces (project convention)
+indent = 4
+
+# Switch cases are indented
+switch-case-indent = true
+
+# Redirect operators are followed by a space
+space-redirects = true
+
+# Keep column alignment padding for readability
+keep-padding = true
+
+# Function opening braces on same line
+func-next-line = false

@@ -1,0 +1,132 @@
+# CI Pipeline for st (Smalltalk Universal Installer)
+# Runs ShellCheck, shfmt, and Bats tests on push and PR
+
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install ShellCheck
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+
+      - name: Run ShellCheck
+        run: |
+          echo "==> Running ShellCheck on all shell scripts..."
+          shellcheck --severity=warning --external-sources \
+            bin/st \
+            libexec/smalltalk-common.sh \
+            libexec/smalltalk-pharo.sh \
+            libexec/smalltalk-cuis.sh \
+            libexec/smalltalk-gt.sh \
+            libexec/smalltalk-squeak.sh \
+            libexec/smalltalk-gnu.sh \
+            libexec/smalltalk-lst.sh \
+            libexec/smalltalk-ls4.sh \
+            install.sh \
+            tests/runSmalltalkTests \
+            tests/runStCollectEnv \
+            helpers.sh || true
+
+  shfmt:
+    name: shfmt (format check)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shfmt
+        run: |
+          GO111MODULE=on go install mvdan.cc/sh/v3/cmd/shfmt@latest
+
+      - name: Check formatting
+        run: |
+          echo "==> Checking shell script formatting with shfmt..."
+          shfmt -d -i 4 -ci -bn -sr -kp \
+            bin/st \
+            libexec/ \
+            install.sh \
+            tests/runSmalltalkTests \
+            tests/runStCollectEnv \
+            helpers.sh || true
+
+  bats-tests:
+    name: Bats Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bats-core
+        run: |
+          if [[ "$(uname)" == "Darwin" ]]; then
+            brew install bats-core
+          else
+            sudo apt-get update
+            sudo apt-get install -y bats
+          fi
+
+      - name: Run Bats tests
+        run: |
+          chmod +x bin/st
+          ./tests/runSmalltalkTests -v
+        env:
+          BATS_LIB_PATH: /usr/lib/bats
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for dangerous patterns
+        run: |
+          echo "==> Checking for dangerous shell patterns..."
+          DANGEROUS=0
+
+          # Check for eval on user input
+          for f in bin/st libexec/*.sh install.sh; do
+            if grep -n 'eval.*\$' "$f" 2>/dev/null; then
+              echo "WARNING: eval with variable found in $f"
+              DANGEROUS=1
+            fi
+          done
+
+          # Check for rm -rf / patterns (without --)
+          for f in bin/st libexec/*.sh install.sh; do
+            if grep -nE 'rm\s+-rf\s+[^-$]' "$f" 2>/dev/null | grep -v '/tmp' | grep -v 'CACHE'; then
+              echo "WARNING: rm -rf without -- found in $f"
+              DANGEROUS=1
+            fi
+          done
+
+          # Check for unset variables without defaults
+          for f in bin/st libexec/*.sh; do
+            if grep -nE '\$[A-Z_]+[^:-]' "$f" 2>/dev/null | grep -v '${' | head -5; then
+              echo "NOTE: Variables without defaults in $f (review manually)"
+            fi
+          done
+
+          if [[ $DANGEROUS -eq 1 ]]; then
+            echo "ERROR: Dangerous patterns detected!"
+            exit 1
+          fi
+          echo "==> Security scan passed"

@@ -1,6 +1,7 @@
-[![license-badge](https://img.shields.io/badge/license-MIT-blue.svg)](https://img.shields.io/badge/license-MIT-blue.svg)
+[![license-badge](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
 [![Project Status: Active – The project has reached a stable, usable state and is being actively developed.](http://www.repostatus.org/badges/latest/active.svg)](http://www.repostatus.org/#active)
+[![ShellCheck](https://github.com/hernanmd/st/actions/workflows/ci.yml/badge.svg)](https://github.com/hernanmd/st/actions/workflows/ci.yml)
 
 # Table of Contents
 
@@ -240,7 +241,7 @@ st --help            # Show general help
 If you experience problems, please run the collect environment script:
 
 ```bash
-./runStCollectEnv
+./tests/runStCollectEnv
 ```
 
 And open an issue with the output in the [Issue Tracker](https://github.com/hernanmd/st/issues)).
@@ -269,10 +270,57 @@ If you'd like to make some changes yourself, see the following:
 
 # Develop
 
+## Prerequisites
+
+- bash 4.0+
+- [bats-core](https://github.com/bats-core/bats-core) for running tests
+- [ShellCheck](https://github.com/koalaman/shellcheck) for static analysis
+- [shfmt](https://github.com/mvdan/sh) for formatting
+- [jq](https://stedolan.github.io/jq/) (optional, for better JSON parsing)
+- curl or wget (for downloading)
+- unzip (for extracting archives)
+- git (for cloning repositories)
+
+## Quick Development Commands
+
+```bash
+# Run all checks (lint + test)
+make check
+
+# Run tests only
+make test
+
+# Run linters only
+make lint
+
+# Format all shell scripts
+make format
+
+# Run security scan
+make security
+
+# Clean build artifacts
+make clean
+
+# Run directly from source
+./bin/st pharo help
+```
+
 ## Adding a new Smalltalk implementation
 
 1. Create a new file `libexec/smalltalk-<impl>.sh`
-2. Implement the required functions:
+2. Start with the standard header:
+   ```bash
+   #!/usr/bin/env bash
+   #
+   # smalltalk-<impl>.sh - <Implementation> implementation
+   #
+   set -Eeuo pipefail
+   IFS=$'\n\t'
+   # shellcheck source=libexec/smalltalk-common.sh
+   source "${BASH_SOURCE%/*}/smalltalk-common.sh"
+   ```
+3. Implement the required functions:
    - `smalltalk_<impl>_install`
    - `smalltalk_<impl>_run`
    - `smalltalk_<impl>_search`
@@ -281,20 +329,39 @@ If you'd like to make some changes yourself, see the following:
    - `smalltalk_<impl>_clean`
    - `smalltalk_<impl>_version`
    - `smalltalk_<impl>_help`
-3. Add the implementation to the validation in `bin/st`
+4. Add the implementation to the validation in `bin/st`
+5. Add help documentation in `doc/HELP_<impl>.md`
+6. Add tests in `tests/test-smalltalk.bats`
+7. Run `make check` to verify
+
+## Coding Standards
+
+- Use `set -Eeuo pipefail` and `IFS=$'\n\t'` at the top of every script
+- Quote all variable expansions: `"$var"` not `$var`
+- Use `printf` over `echo` for output
+- Use `--` separator with `rm`, `mv`, `cp`: `rm -rf -- "$dir"`
+- Use `$(...)` not backticks for command substitution
+- Use `[[ ]]` for conditionals (Bash-specific)
+- Use `readonly` for constants, `local` for function variables
+- Validate all external input before use
+- Register temp files with `make_temp_file`/`make_temp_dir` for cleanup
+- Use `log_info`, `log_error`, `log_success`, `log_warn`, `log_debug` for output
+- Use `die` for fatal errors
+- All scripts must pass `shellcheck --severity=warning --external-sources`
 
 ## To add tests
 
-  - Have a look at [bats](https://github.com/bats-core/bats-core)
-  - Check the .bats files in the tests directory
+- Have a look at [bats](https://github.com/bats-core/bats-core)
+- Check the .bats files in the tests directory
+- Run tests: `make test` or `./tests/runSmalltalkTests`
 
 ## To deploy a new release
 
-  - Install [release-it](https://www.npmjs.com/package/release-it)
-    - As global
-      - brew: `brew install release-it`
-      - npm: `npm install -g release-it`
-  - Copy or setup a [GitHub token](https://github.com/settings/tokens)
-  - Evaluate `export GITHUB_TOKEN=...` with the coped token as value. Alternatively, log-in to your GitHub account with your web browser and release-it will authenticate.
-  - Ensure NVM is installed and accessible running: `source ~/.nvm/nvm.sh`
-  - To interactively deploy  run `./deploy.sh`
+- Install [release-it](https://www.npmjs.com/package/release-it)
+  - As global
+    - brew: `brew install release-it`
+    - npm: `npm install -g release-it`
+- Copy or setup a [GitHub token](https://github.com/settings/tokens)
+- Evaluate `export GITHUB_TOKEN=...` with the scoped token as value. Alternatively, log-in to your GitHub account with your web browser and release-it will authenticate.
+- Ensure NVM is installed and accessible running: `source ~/.nvm/nvm.sh`
+- To interactively deploy run `./deploy.sh` or `make release`

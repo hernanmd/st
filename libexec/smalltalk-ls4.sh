@@ -2,9 +2,10 @@
 #
 # smalltalk-ls4.sh - Little Smalltalk v4 implementation (kyle-github/littlesmalltalk)
 #
-set -u
-set -o pipefail
+set -Euo pipefail
+IFS=$'\n\t'
 
+# shellcheck source=libexec/smalltalk-common.sh
 source "${BASH_SOURCE%/*}/smalltalk-common.sh"
 
 #################################
@@ -125,7 +126,7 @@ download_ls4() {
     # Extract the archive
     log_info "Extracting archive..."
     extract_archive "$archive_name" "$install_dir"
-    rm -f "$archive_name"
+    rm -f -- "$archive_name"
 
     # The archive extracts to a directory like "littlesmalltalk-v4.7.2"
     # Find the extracted directory
@@ -391,8 +392,8 @@ smalltalk_ls4_clean_artifacts() {
         cd "$impl_dir" || return 1
 
         # Clean build artifacts but keep source
-        rm -rf build 2>/dev/null || true
-        rm -f *.o *.a 2>/dev/null || true
+        rm -rf -- build 2>/dev/null || true
+        rm -f -- *.o *.a 2>/dev/null || true
 
         manifest_remove "ls4"
         log_success "Little Smalltalk v4 build artifacts cleaned"

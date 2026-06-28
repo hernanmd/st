@@ -1,13 +1,23 @@
 #!/usr/bin/env bash
 #
-# smalltalk - A unified CLI for Smalltalk implementations
-# Usage: smalltalk [--debug] <implementation> <command> [options]
+# st - A unified CLI for Smalltalk implementations
+#
+# Usage: st [--debug] [--quiet] [--verbose] <implementation> <command> [options]
 #
 # Implementations: pharo, cuis, gt, squeak, gnu, lst, ls4
 # Commands: install, run, eval, search, list, update, clean, clean-artifacts, help
 #
-set -u
-set -o pipefail
+# Exit codes:
+#   0 - Success
+#   1 - General error / invalid arguments
+#   2 - Command not supported by implementation
+#
+# See: https://github.com/hernanmd/st
+#
+set -Euo pipefail
+
+# Prevent word splitting on spaces in variable expansions
+IFS=$'\n\t'
 
 # Handle debug flag early before any other processing
 if [[ $# -gt 0 ]] && ([[ "$1" == "-x" ]] || [[ "$1" == "--debug" ]]); then
@@ -28,11 +38,12 @@ if [[ $# -gt 0 ]] && ([[ "$1" == "-v" ]] || [[ "$1" == "--verbose" ]]); then
     shift
 fi
 
-# Get the directory where this script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# Get the directory where this script is located (resolves symlinks)
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 LIBEXEC_DIR="${SCRIPT_DIR}/../libexec"
 
 # Source common utilities
+# shellcheck source=libexec/smalltalk-common.sh
 source "${LIBEXEC_DIR}/smalltalk-common.sh"
 
 # Print usage information
@@ -107,8 +118,10 @@ print_implementations() {
 
 # Print version information
 print_version() {
-    echo "st version 1.0.0"
-    echo "A unified CLI for Smalltalk implementations"
+    local version
+    version="$(cat "${SCRIPT_DIR}/../VERSION" 2>/dev/null || echo "1.0.0")"
+    printf "st version %s\n" "$version"
+    printf "A unified CLI for Smalltalk implementations\n"
 }
 
 # Main entry point
@@ -117,7 +130,7 @@ main() {
     local cmd="${2:-}"
 
     # Normalize command name (replace hyphens with underscores)
-    cmd=${cmd//-/_}
+    cmd="${cmd//-/_}"
 
     # Handle global commands
     case "$impl" in
@@ -126,11 +139,12 @@ main() {
             if [[ -z "$target" ]]; then
                 clean_all_artifacts
             elif [[ "$target" == "pharo" || "$target" == "gt" || "$target" == "cuis" || "$target" == "squeak" || "$target" == "gnu" || "$target" == "lst" || "$target" == "ls4" ]]; then
+                # shellcheck source=libexec/smalltalk-common.sh
                 source "${LIBEXEC_DIR}/smalltalk-${target}.sh"
                 "smalltalk_${target}_clean_artifacts"
             else
-                echo "Error: Unknown implementation '$target'" >&2
-                echo "Run 'st clean_artifacts' without arguments to clean all artifacts." >&2
+                printf "Error: Unknown implementation '%s'\n" "$target" >&2
+                printf "Run 'st clean_artifacts' without arguments to clean all artifacts.\n" >&2
                 exit 1
             fi
             exit 0
@@ -148,7 +162,7 @@ main() {
             exit 0
             ;;
         "")
-            print_usage
+            print_usage >&2
             exit 1
             ;;
         *)
@@ -160,19 +174,20 @@ main() {
         pharo|cuis|gt|squeak|gnu|lst|ls4)
             ;;
         *)
-            echo "Error: Unknown implementation '$impl'" >&2
-            echo "Run 'st' without arguments to see available implementations." >&2
+            printf "Error: Unknown implementation '%s'\n" "$impl" >&2
+            printf "Run 'st' without arguments to see available implementations.\n" >&2
             exit 1
             ;;
     esac
 
     if [[ -z "$cmd" ]]; then
-        echo "Error: No command specified for '$impl'" >&2
-        echo "Run 'st $impl help' for available commands." >&2
+        printf "Error: No command specified for '%s'\n" "$impl" >&2
+        printf "Run 'st %s help' for available commands.\n" "$impl" >&2
         exit 1
     fi
 
     # Source the implementation-specific script
+    # shellcheck source=libexec/smalltalk-common.sh
     source "${LIBEXEC_DIR}/smalltalk-${impl}.sh"
 
     # Execute the command via dynamic dispatch
@@ -180,9 +195,9 @@ main() {
     if declare -f "$func_name" >/dev/null 2>&1; then
         "$func_name" "${@:3}"
     else
-        echo "Error: Command '$cmd' is not supported by '$impl'" >&2
-        echo "Run 'st $impl help' for available commands." >&2
-        exit 1
+        printf "Error: Command '%s' is not supported by '%s'\n" "$cmd" "$impl" >&2
+        printf "Run 'st %s help' for available commands.\n" "$impl" >&2
+        exit 2
     fi
 }
 
