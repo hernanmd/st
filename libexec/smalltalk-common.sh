@@ -588,11 +588,11 @@ download_file() {
     fi
 
     if cmd_exists curl; then
-        # -#: progress bar, -L: follow redirects, -C: resume support
-        curl -# -L -C - -o "$output" "$url"
+        # -#: progress bar, -L: follow redirects. Fresh download (no -C resume):
+        curl -# -L -o "$output" "$url"
     elif cmd_exists wget; then
-        # --progress=bar:dot: progress bar, -c: continue (resume)
-        wget --progress=bar:dot -c -O "$output" "$url"
+        # --progress=bar:dot: progress bar. Fresh download (no -c resume).
+        wget --progress=bar:dot -O "$output" "$url"
     else
         die "Neither curl nor wget is installed"
     fi

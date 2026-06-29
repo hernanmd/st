@@ -26,9 +26,9 @@
   "type": "module",
   "scripts": {
     "test": "bats tests/",
-    "lint": "shellcheck --severity=warning --external-sources bin/st libexec/*.sh install.sh tests/runSmalltalkTests tests/runStCollectEnv helpers.sh",
-    "format:check": "shfmt -d -i 4 -ci -bn -sr -kp bin/st libexec/*.sh install.sh tests/runSmalltalkTests tests/runStCollectEnv helpers.sh",
-    "format": "shfmt -w -i 4 -ci -bn -sr -kp bin/st libexec/*.sh install.sh tests/runSmalltalkTests tests/runStCollectEnv helpers.sh",
+    "lint": "shellcheck --severity=warning --external-sources bin/st libexec/*.sh install.sh tests/runSmalltalkTests tests/runStCollectEnv",
+    "format:check": "shfmt -d -i 4 -ci -bn -sr -kp bin/st libexec/*.sh install.sh tests/runSmalltalkTests tests/runStCollectEnv",
+    "format": "shfmt -w -i 4 -ci -bn -sr -kp bin/st libexec/*.sh install.sh tests/runSmalltalkTests tests/runStCollectEnv",
     "release": "release-it"
   },
   "devDependencies": {

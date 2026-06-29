@@ -21,7 +21,8 @@ SCRIPTS    := $(BIN_DIR)/st \
               install.sh \
               tests/runSmalltalkTests \
               tests/runStCollectEnv \
-              helpers.sh
+              $(LIBEXEC_DIR)/helpers.sh \
+              $(LIBEXEC_DIR)/deploy.sh
 
 # Colors for output
 RED    := \033[0;31m
@@ -146,7 +147,7 @@ version: ## Show current version
 
 release: ## Create a new release (requires release-it)
 	@printf "${BLUE}==> Creating release...${NC}\n"
-	@./deploy.sh
+	@./libexec/deploy.sh
 
 # ============================================================================
 # Clean

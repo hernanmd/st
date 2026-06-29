@@ -4,7 +4,7 @@
 #
 # This file provides supplementary security functions. All common functions
 # (logging, platform detection, download, extraction, manifest, etc.) are
-# in libexec/smalltalk-common.sh.
+# in smalltalk-common.sh (same directory).
 #
 # Exit codes: 0 on success, 1 on error
 #
@@ -120,7 +120,7 @@ cmd_exists() {
 
 # Source the common utilities for backwards compatibility
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
-if [[ -f "${SCRIPT_DIR}/libexec/smalltalk-common.sh" ]]; then
-    # shellcheck source=libexec/smalltalk-common.sh
-    source "${SCRIPT_DIR}/libexec/smalltalk-common.sh"
+if [[ -f "${SCRIPT_DIR}/smalltalk-common.sh" ]]; then
+    # shellcheck source=smalltalk-common.sh
+    source "${SCRIPT_DIR}/smalltalk-common.sh"
 fi

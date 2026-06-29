@@ -36,7 +36,7 @@ The CLI provides a consistent interface for installing, running, and managing pa
 
 # Demo
 
-![smalltalk-session](https://user-images.githubusercontent.com/4825959/173511060-95f1b227-d459-4097-b4e6-fcaa013768a1.gif)
+![smalltalk-session](https://github.com/user-attachments/assets/c0c4cd8c-0226-4f24-9766-ee54ff43358d)
 
 # Requirements
 
@@ -364,4 +364,4 @@ make clean
 - Copy or setup a [GitHub token](https://github.com/settings/tokens)
 - Evaluate `export GITHUB_TOKEN=...` with the scoped token as value. Alternatively, log-in to your GitHub account with your web browser and release-it will authenticate.
 - Ensure NVM is installed and accessible running: `source ~/.nvm/nvm.sh`
-- To interactively deploy run `./deploy.sh` or `make release`
+- To interactively deploy run `./libexec/deploy.sh` or `make release`

@@ -16,8 +16,8 @@ set -Eeuo pipefail
 # --- Load helper functions ---
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 PROJECT_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd -P)"
-# shellcheck source=../helpers.sh
-source "${PROJECT_ROOT}/helpers.sh"
+# shellcheck source=../libexec/helpers.sh
+source "${PROJECT_ROOT}/libexec/helpers.sh"
 
 # helpers.sh / smalltalk-common.sh do not define a section-header helper; provide one.
 # Writes to $output_file (set below) so it works inside the collection block.

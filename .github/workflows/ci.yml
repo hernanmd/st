@@ -38,7 +38,8 @@ jobs:
             install.sh \
             tests/runSmalltalkTests \
             tests/runStCollectEnv \
-            helpers.sh || true
+            libexec/helpers.sh \
+            libexec/deploy.sh || true
 
   shfmt:
     name: shfmt (format check)
@@ -58,8 +59,7 @@ jobs:
             libexec/ \
             install.sh \
             tests/runSmalltalkTests \
-            tests/runStCollectEnv \
-            helpers.sh || true
+            tests/runStCollectEnv || true
 
   bats-tests:
     name: Bats Tests

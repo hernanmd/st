@@ -8,7 +8,7 @@
 #   -d, --debug       no simulated typing delay
 #   -n, --no-wait     do not wait for ENTER between steps
 #   -w, --wait N      auto-proceed N seconds after each step (0 = manual)
-#   -t, --type N      typing speed in chars/sec (default 20); 0 = instant
+#   -t, --type N      typing speed in chars/sec (default 40); 0 = instant
 #       --fast        shorthand for -d -n (instant, non-interactive playback)
 #   -h, --help        show this help
 #
@@ -41,10 +41,13 @@ export DEMO_WORK_DIR
 cd -- "$DEMO_WORK_DIR" || exit 1
 
 # --- Playback options (override demo-magic defaults) -----------------------
-# demo-magic.sh provides: TYPE_SPEED, NO_WAIT, PROMPT_TIMEOUT.
-TYPE_SPEED="${DEMO_TYPE_SPEED:-20}"
+# demo-magic.sh provides: TYPE_SPEED, NO_WAIT, PROMPT_TIMEOUT, DEMO_COMMENT_COLOR.
+# Type at 40 chars/s (2x the demo-magic default of 20) so each line finishes ~500ms+ sooner,
+# and render comment lines (starting with #) in green.
+TYPE_SPEED="${DEMO_TYPE_SPEED:-40}"
 NO_WAIT="${DEMO_NO_WAIT:-false}"
 PROMPT_TIMEOUT="${DEMO_TIMEOUT:-0}"
+DEMO_COMMENT_COLOR="$GREEN"
 
 _demo_usage() {
     cat << EOF
@@ -54,7 +57,7 @@ Playback options:
   -d, --debug       no simulated typing delay
   -n, --no-wait     do not wait for ENTER between steps
   -w, --wait N      auto-proceed N seconds after each step (0 = manual)
-  -t, --type N      typing speed in chars/sec (default 20); 0 = instant
+  -t, --type N      typing speed in chars/sec (default 40); 0 = instant
       --fast        shorthand for -d -n (instant, non-interactive playback)
   -h, --help        show this help message
 
@@ -142,7 +145,7 @@ clear
 pe "# List available implementations"
 pe "st --list"
 
-pe "# Evaluating an expression"
+pe "# Evaluating an expression in Pharo"
 pe 'st pharo eval "3 + 4"'
 
 pe "# Search for packages on GitHub"
@@ -160,7 +163,7 @@ pe "st squeak run"
 pe "# Query LittleSmalltalk v4 versions"
 pe "st ls4 versions"
 
-pe "# Start CLI interactive eval"
-pe "st ls4 eval"
+pe "# Install Glamorous Toolkit"
+pe "st gt run"
 
 # (EXIT trap runs demo_cleanup, destroying the sandbox and sweeping the repo.)

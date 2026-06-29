@@ -2,7 +2,7 @@
 #
 # deploy.sh - Release deployment script
 #
-# Usage: ./deploy.sh [version]
+# Usage: ./libexec/deploy.sh [version]   (or: make release)
 #
 # Exit codes:
 #   0 - Success
@@ -13,8 +13,18 @@ set -Eeuo pipefail
 main() {
     local version
 
+    # Run from the repository root regardless of where this script is invoked
+    # from, since DATE/VERSION/.nvmrc/.release-it.json live at the repo root.
+    local script_dir project_root
+    script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
+    project_root="$(cd -- "$script_dir/.." && pwd -P)"
+    cd -- "$project_root" || {
+                               printf 'deploy: cannot cd to %s\n' "$project_root" >&2
+                                                                                       exit 1
+    }
+
     if [[ -f .nvmrc ]]; then
-        # shellcheck disable=SC1091
+        # shellcheck disable=SC1090,SC1091
         source ~/.nvm/nvm.sh
         nvm use
     else
