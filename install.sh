@@ -204,16 +204,12 @@ IFS=$'\n\t'
         log_info "Downloading ${SCRIPT_NAME} ${version}..."
         log_info "URL: $url"
 
-        # Check if URL is valid
-        if ! curl -s -o /dev/null -w "%{http_code}\n" "$url" | grep -q "200"; then
-            # Try without .tar.gz
-            url="https://github.com/${GITHUB_REPO}/archive/${version}.tar.gz"
-            log_info "Trying: $url"
-
-            if ! curl -s -o /dev/null -w "%{http_code}\n" "$url" | grep -q "200"; then
-                log_error "Could not download from $url"
-                oops "Failed to download tarball"
-            fi
+        # Check if URL is valid (follow redirects: GitHub archive 302s to codeload.github.com).
+        # Without -L, %{http_code} is 302 and the check always fails even though the
+        # real download (curl -fsSL) would succeed.
+        if ! curl -sL -o /dev/null -w "%{http_code}" "$url" | grep -q '^200$'; then
+            log_error "Could not download from $url"
+            oops "Failed to download tarball"
         fi
 
         # Download with progress
@@ -270,9 +266,10 @@ IFS=$'\n\t'
             create_backup "$target_dir"
         fi
 
-        # Unpack
+        # Unpack. Note: 'tar -xzf -- <file>' is broken because -f greedily takes the
+        # next token ('--') as the archive name. Use -C to set the target dir instead.
         log_info "Unpacking..."
-        (cd "$unpack" && tar -xzf -- "$tarball") || oops "Failed to unpack tarball"
+        tar -xzf "$tarball" -C "$unpack" || oops "Failed to unpack tarball"
 
         # Find the extracted directory (github archives include a prefix)
         local extracted_dir
