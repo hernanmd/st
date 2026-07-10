@@ -89,6 +89,7 @@ print_usage() {
         $'  update           Update package cache' \
         $'  clean            Clean cache directory' \
         $'  clean-artifacts  Clean installed Smalltalk artifacts' \
+        $'  upgrade          Self-upgrade st to the latest release' \
         $'  help             Show help for a specific implementation or command' \
         '' \
         $'\033[1mEXAMPLES\033[0m' \
@@ -108,6 +109,7 @@ print_usage() {
         $'  st -v squeak install                # Install with verbose output' \
         $'  st gnu install                      # Install GNU Smalltalk (prompts for sudo)' \
         $'  st -y gnu install                   # Install GNU Smalltalk, auto-confirm sudo' \
+        $'  st upgrade                         # Self-upgrade st to the latest release' \
         '' \
         "For more information about a specific implementation:" \
         $'  st pharo help' \
@@ -132,6 +134,24 @@ print_version() {
     version="$(cat "${SCRIPT_DIR}/../VERSION" 2> /dev/null || echo "1.0.0")"
     printf "st version %s\n" "$version"
     printf "A unified CLI for Smalltalk implementations\n"
+}
+
+# Self-upgrade: re-run the installer with --force (reinstalls the latest
+# release, backing up the current one to ~/.st/st.backup.<timestamp>).
+upgrade_st() {
+    local install_url="https://raw.githubusercontent.com/hernanmd/st/master/install.sh"
+    local tmp_install
+    tmp_install="$(mktemp)"
+    log_info "Upgrading st (re-running the installer with --force)..."
+    if ! download_file "$install_url" "$tmp_install"; then
+        log_error "Failed to download the installer from ${install_url}"
+        rm -f -- "$tmp_install"
+        return 1
+    fi
+    bash "$tmp_install" --force
+    local rc=$?
+    rm -f -- "$tmp_install"
+    return $rc
 }
 
 # Main entry point
@@ -170,6 +190,10 @@ main() {
         --version | -V | version)
             print_version
             exit 0
+            ;;
+        upgrade | --upgrade)
+            upgrade_st
+            exit $?
             ;;
         "")
             print_usage >&2
