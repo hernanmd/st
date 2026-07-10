@@ -620,10 +620,10 @@ extract_archive() {
             unzip $unzip_flags -o "$archive" -d "$dest_dir"
             ;;
         *.tar.gz | *.tgz)
-            tar $tar_flags "$archive" -C "$dest_dir"
+            tar $tar_flags -f "$archive" -C "$dest_dir"
             ;;
         *.tar.xz)
-            tar $tar_flags "$archive" -C "$dest_dir"
+            tar $tar_flags -f "$archive" -C "$dest_dir"
             ;;
         *)
             die "Unsupported archive format: $archive"
