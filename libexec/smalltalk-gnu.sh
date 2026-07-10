@@ -237,7 +237,7 @@ install_gnustack_package() {
                         log_info "Building GNU Smalltalk ${GNUSTACK_VERSION} from source (this takes a while)."
                         log_info "Installing build dependencies (sudo)..."
                         sudo apt-get install -y \
-                            build-essential autoconf automake libtool texinfo pkg-config gawk zip unzip \
+                            build-essential autoconf automake libtool libtool-bin texinfo pkg-config gawk zip unzip \
                             libgmp-dev libffi-dev libsigsegv-dev libreadline-dev libncurses-dev libltdl-dev \
                             zlib1g-dev libsqlite3-dev libgdbm-dev libexpat1-dev \
                             || die "Failed to install build dependencies"
