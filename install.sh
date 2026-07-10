@@ -311,18 +311,25 @@ IFS=$'\n\t'
             create_backup "$target_dir"
         fi
 
-        # Unpack. Note: 'tar -xzf -- <file>' is broken because -f greedily takes the
-        # next token ('--') as the archive name. Use -C to set the target dir instead.
+        # Unpack into a clean temp dir (NOT directly into $unpack). $unpack may
+        # also hold backup dirs (st.backup.*) created just above; extracting into
+        # it made the find below match a backup and mv it back over the fresh
+        # install on --force reinstalls. A dedicated extract dir avoids that.
         log_info "Unpacking..."
-        tar -xzf "$tarball" -C "$unpack" || oops "Failed to unpack tarball"
+        local extract_dir="${tmpDir}/extract"
+        mkdir -p -- "$extract_dir"
+        tar -xzf "$tarball" -C "$extract_dir" || oops "Failed to unpack tarball"
 
-        # Find the extracted directory (github archives include a prefix)
+        # The GitHub archive contains a single top-level directory (e.g.
+        # st-1.1.1). Locate it in the clean extract dir and move it into place.
         local extracted_dir
-        extracted_dir=$(find "$unpack" -maxdepth 1 -type d -name "smalltalk*" -o -name "st*" 2> /dev/null | head -1)
-
-        if [[ -n "${extracted_dir:-}" ]] && [[ "$extracted_dir" != "$target_dir" ]]; then
-            mv -- "$extracted_dir" "$target_dir" 2> /dev/null || true
+        extracted_dir=$(find "$extract_dir" -maxdepth 1 -mindepth 1 -type d 2> /dev/null | head -1)
+        if [[ -z "${extracted_dir:-}" ]] || [[ ! -d "$extracted_dir" ]]; then
+            oops "Could not find extracted directory in tarball"
         fi
+
+        rm -rf -- "$target_dir" 2> /dev/null || true
+        mv -- "$extracted_dir" "$target_dir" || oops "Failed to move extracted files to $target_dir"
 
         # Verify main script exists
         local main_script="${target_dir}/bin/${SCRIPT_NAME}"
