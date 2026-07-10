@@ -63,6 +63,10 @@ IFS=$'\n\t'
         printf '\033[1;31m[ERROR]\033[0m %s\n' "$*" >&2
     }
 
+    # ANSI color constants (real ESC bytes via $'...' so they work inside
+    # heredocs/echo where '\033' would otherwise print literally).
+    readonly C_GREEN=$'\033[1;32m' C_BOLD=$'\033[1m' C_RESET=$'\033[0m'
+
     # Cleanup temporary files on exit
     cleanup() {
         if [[ -n "${tmpDir:-}" ]] && [[ -d "$tmpDir" ]]; then
@@ -308,9 +312,9 @@ IFS=$'\n\t'
 
         cat <<- EOF
 
-\033[1;32m${SCRIPT_NAME} is installed!\033[0m
+${C_GREEN}${SCRIPT_NAME} is installed!${C_RESET}
 
-\033[1mTo add ${SCRIPT_NAME} to your PATH:\033[0m
+${C_BOLD}To add ${SCRIPT_NAME} to your PATH:${C_RESET}
 
   For bash users:
     echo "export PATH=\"${script_dir}:\$PATH\"" >> ~/.bash_profile
