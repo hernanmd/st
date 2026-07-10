@@ -231,10 +231,21 @@ st squeak run                 # Run Squeak
 
 ### GNU Smalltalk
 ```bash
-st gnu install              # Install via package manager
-st gnu install --source     # Build from source
+st gnu install              # Install via package manager (prompts for sudo password)
+st gnu install --source     # Build from source (no sudo needed)
+st -y gnu install           # Install via package manager, auto-confirm the sudo prompt
 st gnu run script.st        # Run a GNU Smalltalk script
 ```
+
+> **Note:** `st gnu install` installs via your system package manager
+> (`apt`/`dnf`/`pacman`/Homebrew), which requires root on Linux. Run it **as your
+> normal user** — `st` calls `sudo apt-get …` internally and prompts for your
+> password. Do **not** prefix the command with `sudo` (e.g. `sudo st gnu install`):
+> `sudo` resets `PATH` and cannot find `st`, which lives under `~/.st/st/bin`. If
+> you must run it under `sudo`, use the absolute path:
+> `sudo "$HOME/.st/st/bin/st" gnu install`. Pass `-y`/`--yes` to skip the
+> confirmation prompt (the `sudo` password prompt still appears unless your
+> credentials are cached). Use `--source` to build from source without sudo.
 
 ### Little Smalltalk v3
 ```bash

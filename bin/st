@@ -38,6 +38,13 @@ if [[ $# -gt 0 ]] && ([[ "$1" == "-v" ]] || [[ "$1" == "--verbose" ]]); then
     shift
 fi
 
+# Handle yes flag early before any other processing (auto-confirm prompts,
+# e.g. the GNU Smalltalk sudo install confirmation).
+if [[ $# -gt 0 ]] && ([[ "$1" == "-y" ]] || [[ "$1" == "--yes" ]]); then
+    export SMALLTALK_YES=1
+    shift
+fi
+
 # Get the directory where this script is located (resolves symlinks)
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 LIBEXEC_DIR="${SCRIPT_DIR}/../libexec"
@@ -56,6 +63,7 @@ print_usage() {
         $'  --debug, -x         Enable debug mode (set -x tracing)' \
         $'  --quiet, -q         Suppress all output (no colors, no INFO/WARN/SUCCESS/ERROR messages)' \
         $'  --verbose, -v       Show detailed output (file listings during extraction)' \
+        $'  --yes, -y           Auto-confirm prompts (e.g. GNU Smalltalk sudo install)' \
         $'  --list, -l          List available Smalltalk implementations' \
         $'  --version           Show version information' \
         $'  --help, -h          Show this help message' \
@@ -98,6 +106,8 @@ print_usage() {
         $'  st gt eval \'42 inspect\'            # Evaluate in GT' \
         $'  st squeak install                   # Install Squeak' \
         $'  st -v squeak install                # Install with verbose output' \
+        $'  st gnu install                      # Install GNU Smalltalk (prompts for sudo)' \
+        $'  st -y gnu install                   # Install GNU Smalltalk, auto-confirm sudo' \
         '' \
         "For more information about a specific implementation:" \
         $'  st pharo help' \

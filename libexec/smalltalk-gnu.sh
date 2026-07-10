@@ -143,7 +143,7 @@ install_gnustack_package() {
             log_info "GNU Smalltalk requires sudo privileges for package installation."
             log_info "You may be prompted for your password."
 
-            if [[ -z "$SMALLTALK_YES" ]]; then
+            if [[ -z "${SMALLTALK_YES:-}" ]]; then
                 if ! confirm "Continue with sudo installation? [y/N] "; then
                     log_info "Installation cancelled. Use --source to build without sudo."
                     return 1
