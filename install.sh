@@ -246,6 +246,47 @@ IFS=$'\n\t'
         fi
     }
 
+    # Uninstall: remove the installed directory and report leftovers.
+    # Mirrors `make uninstall` (rm -rf ~/.st/st) plus helpful hints for
+    # backups, cache, and the PATH export the user may have added.
+    uninstall_st() {
+        local install_dir="${INSTALL_BASE}/${SCRIPT_NAME}"
+
+        if [[ ! -d "$install_dir" ]]; then
+            log_info "No installation found at ${install_dir}"
+            return 1
+        fi
+
+        log_info "Removing ${install_dir}"
+        rm -rf -- "$install_dir"
+
+        if [[ -d "$install_dir" ]]; then
+            log_error "Failed to remove ${install_dir}"
+            return 1
+        fi
+
+        log_success "Uninstalled ${SCRIPT_NAME}"
+
+        # Report leftovers the user may want to clean up manually.
+        local backups
+        backups="$(find "$INSTALL_BASE" -maxdepth 1 -type d -name "${SCRIPT_NAME}.backup.*" 2> /dev/null || true)"
+        if [[ -n "$backups" ]]; then
+            log_warn "Backup directories remain under ${INSTALL_BASE}:"
+            while IFS= read -r line; do
+                [[ -n "$line" ]] && printf '  %s\n' "$line"
+            done <<< "$backups"
+            log_warn "Remove with: rm -rf ${INSTALL_BASE}/${SCRIPT_NAME}.backup.*"
+        fi
+
+        if [[ -d "${HOME}/.smalltalk-cache" ]]; then
+            log_warn "Smalltalk cache remains at ${HOME}/.smalltalk-cache"
+            log_warn "Remove with: rm -rf ${HOME}/.smalltalk-cache"
+        fi
+
+        log_info "Remove the PATH export from your shell rc (~/.zshrc / ~/.bash_profile) if you added one."
+        return 0
+    }
+
     # Install the downloaded files
     do_install() {
         require_util curl "download the tarball"
@@ -343,6 +384,7 @@ Options:
   -v, --version       Show version
   -f, --force         Force reinstall even if already installed
   -c, --check          Check installation status
+      --uninstall      Remove the installed ${SCRIPT_NAME}
 
 Security:
   This script downloads from: https://github.com/${GITHUB_REPO}
@@ -394,6 +436,7 @@ EOF
     main() {
         local force=false
         local check_only=false
+        local uninstall_only=false
 
         while [[ $# -gt 0 ]]; do
             case "$1" in
@@ -416,12 +459,21 @@ EOF
                     check_only=true
                     shift
                     ;;
+                --uninstall)
+                    uninstall_only=true
+                    shift
+                    ;;
                 *)
                     show_usage
                     exit 1
                     ;;
             esac
         done
+
+        if $uninstall_only; then
+            uninstall_st
+            exit $?
+        fi
 
         if $check_only; then
             check_install
