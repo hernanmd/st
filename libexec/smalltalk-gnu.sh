@@ -125,6 +125,67 @@ install_gnustack_from_source() {
     log_success "GNU Smalltalk installed successfully to ${install_dir}"
 }
 
+# Ask the user how to proceed when the gnu-smalltalk apt package is unavailable
+# (Debian 12+ / recent Ubuntu, where the package was removed). Echoes one of:
+#   source | container | cancel
+# Non-interactive (SMALLTALK_YES set, or no TTY on stdin) defaults to "source".
+choose_gnustack_fallback() {
+    if [[ -n "${SMALLTALK_YES:-}" ]] || [[ ! -t 0 ]]; then
+        echo "source"
+        return 0
+    fi
+    printf '\nGNU Smalltalk is not available via apt on this system.\n' >&2
+    printf 'How would you like to install it?\n' >&2
+    printf '  1) Build from source (vanilla %s - may fail with modern GCC)\n' "${GNUSTACK_VERSION}" >&2
+    printf '  2) Use a Debian 11 (bullseye) container via Docker (gst installs with apt)\n' >&2
+    printf '  3) Cancel\n' >&2
+    local choice
+    while true; do
+        read -r -p "Select [1-3] (default 1): " choice || {
+                                                            echo "source"
+                                                                           return 0
+        }
+        case "$choice" in
+            1 | "")
+                echo "source"
+                return 0
+                ;;
+            2)
+                echo "container"
+                return 0
+                ;;
+            3)
+                echo "cancel"
+                return 0
+                ;;
+            *)
+                printf 'Invalid choice.\n' >&2
+                ;;
+        esac
+    done
+}
+
+# Launch a Debian 11 (bullseye) container, install gnu-smalltalk via apt (the
+# package still exists there), and drop into an interactive shell where 'gst' is
+# available. The container is removed on exit (--rm). Requires Docker.
+install_gnustack_in_container() {
+    if ! cmd_exists docker; then
+        log_error "Docker is not installed."
+        log_info "Install Docker, or choose 'Build from source' instead."
+        return 1
+    fi
+    if ! docker info > /dev/null 2>&1; then
+        log_error "Docker daemon is not reachable (not running, or you lack permissions)."
+        log_info "Start Docker (and add your user to the 'docker' group), or choose 'Build from source'."
+        return 1
+    fi
+    log_info "Launching a Debian 11 (bullseye) container and installing GNU Smalltalk..."
+    log_info "Once the prompt appears, run 'gst --version' to verify; 'exit' to leave (container is auto-removed)."
+    docker run --rm -it debian:bullseye-slim \
+        bash -c 'apt-get update && apt-get install -y gnu-smalltalk && exec bash'
+    return $?
+}
+
 # Install via package manager with user confirmation
 install_gnustack_package() {
     local os_type
@@ -161,18 +222,32 @@ install_gnustack_package() {
                     return 0
                 fi
                 log_warn "The 'gnu-smalltalk' package is unavailable in your apt repositories."
-                log_info "Building GNU Smalltalk ${GNUSTACK_VERSION} from source instead (this takes a while)."
-                log_info "Installing build dependencies (sudo)..."
-                sudo apt-get install -y \
-                    build-essential autoconf automake libtool texinfo pkg-config gawk zip unzip \
-                    libgmp-dev libffi-dev libsigsegv-dev libreadline-dev libncurses-dev libltdl-dev \
-                    zlib1g-dev libsqlite3-dev libgdbm-dev libexpat1-dev \
-                    || die "Failed to install build dependencies"
-                local ts build_dir
-                ts=$(date +%Y%m%d_%H%M%S)
-                build_dir="${HOME}/gnu-smalltalk_${ts}"
-                mkdir -p -- "$build_dir"
-                install_gnustack_from_source "$build_dir"
+                local fallback
+                fallback=$(choose_gnustack_fallback)
+                case "$fallback" in
+                    container)
+                        install_gnustack_in_container
+                        return $?
+                        ;;
+                    cancel)
+                        log_info "Installation cancelled."
+                        return 1
+                        ;;
+                    source)
+                        log_info "Building GNU Smalltalk ${GNUSTACK_VERSION} from source (this takes a while)."
+                        log_info "Installing build dependencies (sudo)..."
+                        sudo apt-get install -y \
+                            build-essential autoconf automake libtool texinfo pkg-config gawk zip unzip \
+                            libgmp-dev libffi-dev libsigsegv-dev libreadline-dev libncurses-dev libltdl-dev \
+                            zlib1g-dev libsqlite3-dev libgdbm-dev libexpat1-dev \
+                            || die "Failed to install build dependencies"
+                        local ts build_dir
+                        ts=$(date +%Y%m%d_%H%M%S)
+                        build_dir="${HOME}/gnu-smalltalk_${ts}"
+                        mkdir -p -- "$build_dir"
+                        install_gnustack_from_source "$build_dir"
+                        ;;
+                esac
             elif cmd_exists dnf; then
                 log_info "Installing GNU Smalltalk via dnf..."
                 sudo dnf install -y smalltalk
