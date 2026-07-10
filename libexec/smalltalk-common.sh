@@ -558,6 +558,82 @@ get_os() {
     printf '%s' "$os_type"
 }
 
+# Given command names that are missing, print an OS/package-manager-tailored
+# one-liner to install the packages that provide them, then return 1. Used to
+# guide users when a build tool is absent (e.g. cmake/g++/make for LS4) instead
+# of letting them hit a raw 'command not found'.
+suggest_install_packages() {
+    local -a missing=("$@")
+    [[ ${#missing[@]} -eq 0 ]] && return 0
+
+    local os_type
+    os_type=$(get_os)
+
+    local cmd
+    local -a pkgs=()
+    case "$os_type" in
+        macos)
+            for cmd in "${missing[@]}"; do
+                case "$cmd" in
+                    g++ | gcc | clang | clang++) pkgs+=(gcc) ;;
+                    make) pkgs+=(make) ;;
+                    *) pkgs+=("$cmd") ;;
+                esac
+            done
+            log_error "Missing build tools: ${missing[*]}"
+            log_info "Install them with:"
+            printf '  xcode-select --install 2> /dev/null; brew install %s\n' "${pkgs[*]}"
+            ;;
+        linux)
+            if cmd_exists apt-get; then
+                for cmd in "${missing[@]}"; do
+                    case "$cmd" in
+                        g++) pkgs+=(g++) ;;
+                        gcc) pkgs+=(gcc) ;;
+                        clang | clang++) pkgs+=(clang) ;;
+                        make) pkgs+=(make) ;;
+                        *) pkgs+=("$cmd") ;;
+                    esac
+                done
+                log_error "Missing build tools: ${missing[*]}"
+                log_info "On Debian/Ubuntu, install them with:"
+                printf '  sudo apt-get install -y %s\n' "${pkgs[*]}"
+            elif cmd_exists dnf; then
+                for cmd in "${missing[@]}"; do
+                    case "$cmd" in
+                        g++ | gcc) pkgs+=(gcc-c++) ;;
+                        clang | clang++) pkgs+=(clang) ;;
+                        make) pkgs+=(make) ;;
+                        *) pkgs+=("$cmd") ;;
+                    esac
+                done
+                log_error "Missing build tools: ${missing[*]}"
+                log_info "On Fedora/RHEL, install them with:"
+                printf '  sudo dnf install -y %s\n' "${pkgs[*]}"
+            elif cmd_exists pacman; then
+                for cmd in "${missing[@]}"; do
+                    case "$cmd" in
+                        g++ | gcc | clang | clang++) pkgs+=(gcc) ;;
+                        make) pkgs+=(make) ;;
+                        *) pkgs+=("$cmd") ;;
+                    esac
+                done
+                log_error "Missing build tools: ${missing[*]}"
+                log_info "On Arch, install them with:"
+                printf '  sudo pacman -S --noconfirm %s\n' "${pkgs[*]}"
+            else
+                log_error "Missing build tools: ${missing[*]}"
+                log_info "Install them via your package manager."
+            fi
+            ;;
+        *)
+            log_error "Missing build tools: ${missing[*]}"
+            log_info "Install them via your package manager."
+            ;;
+    esac
+    return 1
+}
+
 # Get architecture
 # Returns: "x86_64", "arm64", "arm", "x86", or "unknown" on stdout
 get_arch() {

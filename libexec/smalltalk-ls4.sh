@@ -103,6 +103,17 @@ download_ls4() {
     version=$(get_ls4_latest_version)
     log_info "Latest version: $version"
 
+    # Fail fast with an OS-tailored install hint if the build tools are missing,
+    # instead of downloading/extracting and then hitting 'cmake: command not found'.
+    local -a missing_tools=()
+    cmd_exists cmake || missing_tools+=(cmake)
+    if ! cmd_exists "g++" && ! cmd_exists "clang++"; then missing_tools+=(g++); fi
+    cmd_exists make || missing_tools+=(make)
+    if [[ ${#missing_tools[@]} -gt 0 ]]; then
+        suggest_install_packages "${missing_tools[@]}"
+        die "Cannot build Little Smalltalk v4 without the required build tools."
+    fi
+
     log_info "Downloading Little Smalltalk v4 ($version) to ${install_dir}..."
 
     # Ensure the directory exists
