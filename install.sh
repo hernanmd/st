@@ -437,7 +437,9 @@ EOF
     }
 
     # Run main if script is executed (not sourced)
-    if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    # Use ${BASH_SOURCE[0]:-$0} so the script also works under `bash -c "$(curl ...)"
+    # where BASH_SOURCE is unset (avoids 'unbound variable' under set -u).
+    if [[ "${BASH_SOURCE[0]:-$0}" == "$0" ]]; then
         main "$@"
     fi
 
