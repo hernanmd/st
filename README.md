@@ -10,6 +10,7 @@
 - [Requirements](#requirements)
 - [Installation](#installation)
   - [Common steps](#common-steps)
+  - [Installer options](#installer-options)
   - [Bash users](#bash-users)
   - [Zsh users](#zsh-users)
 - [Features](#features)
@@ -94,6 +95,43 @@ The first step is to download the package from a command line terminal:
 ```bash
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/hernanmd/st/master/install.sh)"
 ```
+
+### Installer options
+
+The installer accepts flags passed after a throwaway `_` placeholder — the first
+argument to `bash -c` becomes `$0`, so `_` reserves it and lets the flags reach
+the option parser:
+
+```bash
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/hernanmd/st/master/install.sh)" _ [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| (none) | Install `st` (skips if already installed) |
+| `--force`, `-f` | Reinstall even if already installed; the previous install is backed up to `~/.st/st.backup.<timestamp>` |
+| `--uninstall` | Remove the installed `st` (`~/.st/st`). Reports leftover backups, the Smalltalk cache, and the PATH export to clean up; exits `1` if nothing is installed |
+| `--check`, `-c` | Check installation status (exit `0` if installed, `1` otherwise) |
+| `--upgrade`, `-u` | Upgrade to the latest version |
+| `--version`, `-v` | Show installer version |
+| `--help`, `-h` | Show help |
+
+Examples:
+
+```bash
+# Reinstall / upgrade (backs up the previous install)
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/hernanmd/st/master/install.sh)" _ --force
+
+# Uninstall
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/hernanmd/st/master/install.sh)" _ --uninstall
+
+# Check status
+bash -c "$(curl -fsSL https://raw.githubusercontent.com/hernanmd/st/master/install.sh)" _ --check
+```
+
+> **Note on the `_` placeholder:** it stands in for `$0`. If you omit it, the
+> first flag (`--force`, `--uninstall`, …) is consumed as the script name and
+> never reaches the option parser.
 
 The next step is to configure your PATH variable to find the command. To find which shell you are using now, type:
 
