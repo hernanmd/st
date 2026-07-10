@@ -136,7 +136,7 @@ install_gnustack_package() {
                 log_info "Installing GNU Smalltalk via Homebrew..."
                 brew install gnu-smalltalk
             else
-                die "Homebrew not found. Install from source with 'smalltalk gnu install --source'"
+                die "Homebrew not found. Install from source with 'st gnu install --source'"
             fi
             ;;
         linux)
@@ -152,7 +152,27 @@ install_gnustack_package() {
 
             if cmd_exists apt-get; then
                 log_info "Installing GNU Smalltalk via apt..."
-                sudo apt-get install -y smalltalk
+                # The Debian/Ubuntu package is 'gnu-smalltalk' (not 'smalltalk'). It was
+                # removed from Debian 12+ / recent Ubuntu because upstream GNU Smalltalk
+                # became unmaintained and no longer builds cleanly with modern
+                # toolchains. If apt can't provide it, fall back to building from source.
+                if sudo apt-get install -y gnu-smalltalk && command -v gst > /dev/null 2>&1; then
+                    log_success "GNU Smalltalk installed via apt"
+                    return 0
+                fi
+                log_warn "The 'gnu-smalltalk' package is unavailable in your apt repositories."
+                log_info "Building GNU Smalltalk ${GNUSTACK_VERSION} from source instead (this takes a while)."
+                log_info "Installing build dependencies (sudo)..."
+                sudo apt-get install -y \
+                    build-essential autoconf automake libtool texinfo pkg-config gawk zip unzip \
+                    libgmp-dev libffi-dev libsigsegv-dev libreadline-dev libncurses-dev libltdl-dev \
+                    zlib1g-dev libsqlite3-dev libgdbm-dev libexpat1-dev \
+                    || die "Failed to install build dependencies"
+                local ts build_dir
+                ts=$(date +%Y%m%d_%H%M%S)
+                build_dir="${HOME}/gnu-smalltalk_${ts}"
+                mkdir -p -- "$build_dir"
+                install_gnustack_from_source "$build_dir"
             elif cmd_exists dnf; then
                 log_info "Installing GNU Smalltalk via dnf..."
                 sudo dnf install -y smalltalk
