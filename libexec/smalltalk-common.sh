@@ -771,7 +771,7 @@ update_monticello_packages() {
 
     # Pace GitHub Search API requests. Unauthenticated search is limited to
     # ~10 requests/minute, so wait at least this many seconds between calls.
-    local min_interval=6
+    local min_interval=7
     if [[ -f "$rate_limit_file" ]]; then
         local last_call=0
         last_call="$(cat -- "$rate_limit_file" 2> /dev/null || printf '0')"
@@ -787,65 +787,101 @@ update_monticello_packages() {
 
     local tmp_dir
     tmp_dir="$(mktemp -d)"
-    local base_url="https://api.github.com/search/repositories?q=topic:${topic}&per_page=${per_page}"
-    local page=1 total_count=0 collected=0
     local -a page_files=()
+    local grand_total=0
+    local created_after=""          # date boundary for splitting windows
+    local batch=0
+    local first_req=1
 
-    # Fetch page 1, then walk subsequent pages until we have every result.
-    date +%s > "$rate_limit_file"
-    local first="$tmp_dir/page_1.json"
-    if ! download_file "${base_url}&page=1" "$first"; then
-        log_error "Failed to update cache"
-        rm -rf -- "$tmp_dir"
-        return 1
-    fi
+    # GitHub Search caps each query at 1000 results. To enumerate more, walk the
+    # topic in created-asc order; whenever a window hits the 1000 cap, narrow to
+    # repos created on/after the 1000th item's date and continue. Windows overlap
+    # at the boundary (created:>=) so no repo is lost; duplicates are removed by
+    # id when merging.
+    while true; do
+        batch=$((batch + 1))
+        local q="topic:${topic}"
+        [[ -n "$created_after" ]] && q="${q}+created:%3E=${created_after}"
+        local base_url="https://api.github.com/search/repositories?per_page=${per_page}&sort=created&order=asc&q=${q}"
 
-    local errors
-    errors="$(jq '.errors // [] | length' "$first" 2> /dev/null || printf '0')"
-    if [[ "$errors" -gt 0 ]]; then
-        log_error "GitHub API returned errors"
-        jq '.errors[]?.message' "$first" 2> /dev/null
-        rm -rf -- "$tmp_dir"
-        return 1
-    fi
-
-    total_count="$(jq '.total_count // 0' "$first" 2> /dev/null || printf '0')"
-    collected="$(jq '.items // [] | length' "$first" 2> /dev/null || printf '0')"
-    page_files+=("$first")
-
-    # GitHub Search caps at the first 1000 results (10 pages of 100).
-    local max_pages=$(((total_count + per_page - 1) / per_page))
-    if [[ $max_pages -gt 10 ]]; then max_pages=10; fi
-
-    while [[ $page -lt $max_pages ]] && [[ $collected -lt $total_count ]]; do
-        page=$((page + 1))
-        sleep "$min_interval"
+        # Page 1 of this window.
+        if [[ $first_req -eq 1 ]]; then first_req=0; else sleep "$min_interval"; fi
         date +%s > "$rate_limit_file"
-        local pf="$tmp_dir/page_${page}.json"
-        if ! download_file "${base_url}&page=${page}" "$pf"; then
-            log_warn "Failed to fetch page ${page}; stopping pagination."
+        local p1="$tmp_dir/b${batch}_p1.json"
+        if ! download_file "${base_url}&page=1" "$p1"; then
+            log_warn "Failed to fetch a page; stopping."
             break
         fi
-        local n msg
-        n="$(jq '.items // [] | length' "$pf" 2> /dev/null || printf '0')"
-        if [[ "$n" -eq 0 ]]; then
-            msg="$(jq -r '.message // ""' "$pf" 2> /dev/null || true)"
-            if [[ -n "$msg" ]]; then log_warn "GitHub: $msg"; fi
+
+        local errors
+        errors="$(jq '.errors // [] | length' "$p1" 2> /dev/null || printf '0')"
+        if [[ "$errors" -gt 0 ]]; then
+            log_error "GitHub API returned errors"
+            jq '.errors[]?.message' "$p1" 2> /dev/null
             break
         fi
-        page_files+=("$pf")
-        collected=$((collected + n))
+
+        local window_total window_count
+        window_total="$(jq '.total_count // 0' "$p1" 2> /dev/null || printf '0')"
+        window_count="$(jq '.items // [] | length' "$p1" 2> /dev/null || printf '0')"
+        [[ $grand_total -eq 0 ]] && grand_total="$window_total"
+        page_files+=("$p1")
+
+        # Pages 2..10 of this window (a query yields at most 1000 = 10 pages).
+        local pg=1
+        while [[ $pg -lt 10 ]] && [[ $window_count -lt $window_total ]]; do
+            pg=$((pg + 1))
+            sleep "$min_interval"
+            date +%s > "$rate_limit_file"
+            local pf="$tmp_dir/b${batch}_p${pg}.json"
+            if ! download_file "${base_url}&page=${pg}" "$pf"; then
+                log_warn "Failed to fetch page ${pg}; stopping."
+                break 2
+            fi
+            local n msg
+            n="$(jq '.items // [] | length' "$pf" 2> /dev/null || printf '0')"
+            if [[ "$n" -eq 0 ]]; then
+                msg="$(jq -r '.message // ""' "$pf" 2> /dev/null || true)"
+                if [[ -n "$msg" ]]; then log_warn "GitHub: $msg"; fi
+                break
+            fi
+            page_files+=("$pf")
+            window_count=$((window_count + n))
+        done
+
+        # If the whole window fit within the 1000 cap, we have everything.
+        if [[ $window_total -le 1000 ]]; then break; fi
+
+        # Otherwise advance the boundary to the last (newest in window) item's
+        # created date and loop to fetch the remainder.
+        local last_idx=$((${#page_files[@]} - 1))
+        local last_created
+        last_created="$(jq -r '.items[-1].created_at // ""' "${page_files[$last_idx]}" 2> /dev/null | cut -dT -f1)"
+        if [[ -z "$last_created" ]] || [[ "$last_created" == "$created_after" ]]; then
+            log_warn "Cannot advance the date window past ${created_after:-start}; stopping."
+            break
+        fi
+        created_after="$last_created"
     done
 
-    # Merge all pages into one cache: {total_count, items:[...]} so that
-    # list_monticello_packages' 'jq .items[]' reads every package.
-    jq -s '{total_count: (.[0].total_count), items: ([.[].items] | add)}' \
-        "${page_files[@]}" > "$cache_file"
+    # Merge all pages, deduping by id (order-preserving) since the created:>=
+    # windows overlap at each boundary. list_monticello_packages reads .items[].
+    local collected=0
+    if [[ ${#page_files[@]} -gt 0 ]]; then
+        jq -s '
+            ([.[].items] | add) as $all
+            | { total_count: ([.[].total_count] | max),
+                items: ($all | reduce .[] as $x ({seen:{}, out:[]};
+                    if .seen[($x.id|tostring)] then .
+                    else (.seen[($x.id|tostring)] = true | .out += [$x]) end) | .out) }
+        ' "${page_files[@]}" > "$cache_file"
+        collected="$(jq '.items | length' "$cache_file" 2> /dev/null || printf '0')"
+    fi
 
     rm -rf -- "$tmp_dir"
 
     if [[ -f "$cache_file" ]]; then
-        log_success "Package cache updated (${collected} of ${total_count} packages)"
+        log_success "Package cache updated (${collected} of ${grand_total} packages)"
     else
         log_error "Failed to update cache"
         return 1
