@@ -760,18 +760,23 @@ update_monticello_packages() {
     local topic="${2:-$impl}"
     local cache_file="${CACHE_DIR}/${impl}/packages.json"
     local rate_limit_file="${CACHE_DIR}/github_rate_limit"
+    local per_page=100
 
     ensure_cache_dir
     mkdir -p -- "${CACHE_DIR}/${impl}"
 
-    # Check GitHub API rate limit to avoid being blocked
+    if ! cmd_exists jq; then
+        die "jq is required to update the package cache. Please install jq."
+    fi
+
+    # Pace GitHub Search API requests. Unauthenticated search is limited to
+    # ~10 requests/minute, so wait at least this many seconds between calls.
+    local min_interval=6
     if [[ -f "$rate_limit_file" ]]; then
         local last_call=0
         last_call="$(cat -- "$rate_limit_file" 2> /dev/null || printf '0')"
         local now
         now="$(date +%s)"
-        local min_interval=1  # Minimum 1 second between API calls
-
         if [[ $((now - last_call)) -lt $min_interval ]]; then
             log_debug "Rate limiting: waiting $((min_interval - (now - last_call))) seconds..."
             sleep $((min_interval - (now - last_call)))
@@ -780,31 +785,67 @@ update_monticello_packages() {
 
     log_info "Updating ${impl} package cache..."
 
-    local api_url="https://api.github.com/search/repositories?q=topic:${topic}&per_page=100"
+    local tmp_dir
+    tmp_dir="$(mktemp -d)"
+    local base_url="https://api.github.com/search/repositories?q=topic:${topic}&per_page=${per_page}"
+    local page=1 total_count=0 collected=0
+    local -a page_files=()
 
-    # Record the API call timestamp
+    # Fetch page 1, then walk subsequent pages until we have every result.
     date +%s > "$rate_limit_file"
+    local first="$tmp_dir/page_1.json"
+    if ! download_file "${base_url}&page=1" "$first"; then
+        log_error "Failed to update cache"
+        rm -rf -- "$tmp_dir"
+        return 1
+    fi
 
-    download_file "$api_url" "$cache_file"
+    local errors
+    errors="$(jq '.errors // [] | length' "$first" 2> /dev/null || printf '0')"
+    if [[ "$errors" -gt 0 ]]; then
+        log_error "GitHub API returned errors"
+        jq '.errors[]?.message' "$first" 2> /dev/null
+        rm -rf -- "$tmp_dir"
+        return 1
+    fi
+
+    total_count="$(jq '.total_count // 0' "$first" 2> /dev/null || printf '0')"
+    collected="$(jq '.items // [] | length' "$first" 2> /dev/null || printf '0')"
+    page_files+=("$first")
+
+    # GitHub Search caps at the first 1000 results (10 pages of 100).
+    local max_pages=$(((total_count + per_page - 1) / per_page))
+    if [[ $max_pages -gt 10 ]]; then max_pages=10; fi
+
+    while [[ $page -lt $max_pages ]] && [[ $collected -lt $total_count ]]; do
+        page=$((page + 1))
+        sleep "$min_interval"
+        date +%s > "$rate_limit_file"
+        local pf="$tmp_dir/page_${page}.json"
+        if ! download_file "${base_url}&page=${page}" "$pf"; then
+            log_warn "Failed to fetch page ${page}; stopping pagination."
+            break
+        fi
+        local n msg
+        n="$(jq '.items // [] | length' "$pf" 2> /dev/null || printf '0')"
+        if [[ "$n" -eq 0 ]]; then
+            msg="$(jq -r '.message // ""' "$pf" 2> /dev/null || true)"
+            if [[ -n "$msg" ]]; then log_warn "GitHub: $msg"; fi
+            break
+        fi
+        page_files+=("$pf")
+        collected=$((collected + n))
+    done
+
+    # Merge all pages into one cache: {total_count, items:[...]} so that
+    # list_monticello_packages' 'jq .items[]' reads every package.
+    jq -s '{total_count: (.[0].total_count), items: ([.[].items] | add)}' \
+        "${page_files[@]}" > "$cache_file"
+
+    rm -rf -- "$tmp_dir"
 
     if [[ -f "$cache_file" ]]; then
-        # Check if we got an error response
-        if cmd_exists jq; then
-            local errors
-            errors="$(jq '.errors // [] | length' "$cache_file" 2> /dev/null || printf '0')"
-            if [[ "$errors" -gt 0 ]]; then
-                log_error "GitHub API returned errors"
-                jq '.errors[]?.message' "$cache_file" 2> /dev/null
-                return 1
-            fi
-
-            local rate_remaining
-            rate_remaining="$(jq '.response.headers."X-RateLimit-Remaining" // "unknown"' "$cache_file" 2> /dev/null || printf 'unknown')"
-            if [[ "$rate_remaining" == "0" ]]; then
-                log_warn "GitHub API rate limit reached"
-            fi
-        fi
-        log_success "Package cache updated"
+        log_success "Package cache updated (${collected} of ${total_count} packages)"
     else
         log_error "Failed to update cache"
         return 1
