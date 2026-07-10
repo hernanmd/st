@@ -587,15 +587,30 @@ download_file() {
         die "Invalid or unsafe URL: $url"
     fi
 
-    if cmd_exists curl; then
-        # -#: progress bar, -L: follow redirects. Fresh download (no -C resume):
-        curl -# -L -o "$output" "$url"
-    elif cmd_exists wget; then
-        # --progress=bar:dot: progress bar. Fresh download (no -c resume).
-        wget --progress=bar:dot -O "$output" "$url"
-    else
-        die "Neither curl nor wget is installed"
-    fi
+    # Retry transient transport errors (e.g. curl 56 'unexpected eof while
+    # reading' with OpenSSL 3.x, timeouts, connection resets). Keyed on the
+    # downloader's exit code: HTTP 4xx (403 rate-limit, 404) returns 0 here
+    # (curl/wget save the response body without -f), so those are NOT retried
+    # - callers detect them via the response body. Up to max_retries attempts.
+    local max_retries=3
+    local attempt=1
+    while true; do
+        if cmd_exists curl; then
+            # -#: progress bar, -L: follow redirects. Fresh download (no -C resume):
+            curl -# -L -o "$output" "$url" && return 0
+        elif cmd_exists wget; then
+            # --progress=bar:dot: progress bar. Fresh download (no -c resume).
+            wget --progress=bar:dot -O "$output" "$url" && return 0
+        else
+            die "Neither curl nor wget is installed"
+        fi
+        attempt=$((attempt + 1))
+        if [[ $attempt -gt $max_retries ]]; then
+            return 1
+        fi
+        log_warn "Download failed (attempt $((attempt - 1))/$max_retries), retrying in 3s..."
+        sleep 3
+    done
 }
 
 # Extract archive (zip, tar.gz, tar.xz)
