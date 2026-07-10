@@ -32,7 +32,7 @@ BLUE   := \033[0;34m
 NC     := \033[0m
 
 .PHONY: all lint shellcheck shfmt format test check clean help \
-        security install uninstall release version
+        security install uninstall release version checksums
 
 # Default target
 all: lint test
@@ -148,6 +148,10 @@ version: ## Show current version
 release: ## Create a new release (requires release-it)
 	@printf "${BLUE}==> Creating release...${NC}\n"
 	@./libexec/deploy.sh
+
+checksums: ## Publish checksums.txt to an existing release. Usage: make checksums VERSION=1.1.0
+	@[ -n "${VERSION}" ] || { printf "${RED}Usage: make checksums VERSION=<tag>\n${NC}"; exit 1; }
+	@./libexec/publish-checksums.sh "${VERSION}"
 
 # ============================================================================
 # Clean

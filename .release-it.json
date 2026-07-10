@@ -13,6 +13,7 @@
     "publish": false
   },
   "hooks": {
-    "after:bump": "npx auto-changelog -p"
+    "after:bump": "npx auto-changelog -p",
+    "after:github:release": "./libexec/publish-checksums.sh ${version}"
   }
 }
