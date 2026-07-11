@@ -1,6 +1,6 @@
 {
   "name": "smalltalk",
-  "version": "1.1.17",
+  "version": "1.1.18",
   "description": "A unified CLI for installing and managing multiple Smalltalk implementations (Pharo, Cuis, GT, Squeak, GNU Smalltalk, LST, LS4)",
   "keywords": [
     "smalltalk",
