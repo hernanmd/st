@@ -216,9 +216,11 @@ st --help                    # Show help
 
 ### Pharo
 ```bash
-st pharo install              # Install Pharo
+st pharo install              # Install Pharo (latest stable)
 st pharo install -d ~/pharo  # Install to specific directory
 st pharo install Seaside     # Install Pharo with Seaside package
+st pharo 12 install Seaside  # Install Seaside in a Pharo 12 image
+st pharo 9 eval '3 + 4'      # Evaluate 3 + 4 in a Pharo 9 image
 st pharo run                  # Run Pharo
 ```
 

@@ -85,6 +85,9 @@ is_pharo_installed() {
 
     # Check for timestamped directories in current directory (e.g., Pharo-13_20240410_220002)
     for dir in Pharo-*; do
+        if [[ "${PHARO_VERSION_REQUESTED:-0}" == "1" ]] && [[ "$dir" != Pharo-"${PHARO_VERSION}"_* ]]; then
+            continue
+        fi
         if [[ -d "$dir" ]] && [[ -f "${dir}/Pharo.image" ]] && [[ -f "${dir}/Pharo.changes" ]]; then
             echo "$(pwd)/$dir"
             return 0
@@ -100,6 +103,9 @@ is_pharo_installed() {
         fi
         # Also check subdirectories
         for subdir in "$dir"/Pharo-*; do
+            if [[ "${PHARO_VERSION_REQUESTED:-0}" == "1" ]] && [[ "$subdir" != */Pharo-${PHARO_VERSION}_* ]]; then
+                continue
+            fi
             if [[ -d "$subdir" ]] && [[ -f "${subdir}/Pharo.image" ]] && [[ -f "${subdir}/Pharo.changes" ]]; then
                 echo "$subdir"
                 return 0
@@ -124,6 +130,10 @@ find_pharo_in_current_dir() {
 
     shopt -s nullglob
     for dir in Pharo-*; do
+        # When a specific Pharo version is requested, skip other versions
+        if [[ "${PHARO_VERSION_REQUESTED:-0}" == "1" ]] && [[ "$dir" != Pharo-"${PHARO_VERSION}"_* ]]; then
+            continue
+        fi
         if [[ -d "$dir" ]] && [[ -f "${dir}/Pharo.image" ]]; then
             # Get modification time to find most recent
             local mtime

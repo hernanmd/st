@@ -96,6 +96,8 @@ print_usage() {
         $'  st pharo install                    # Install Pharo' \
         $'  st pharo install SomePackage        # Install a Pharo package' \
         $'  st pharo install -d ~/my-pharo      # Install to specific directory' \
+        $'  st pharo 12 install Seaside        # Install Pharo 12 with Seaside' \
+        $'  st pharo 9 eval \'3 + 4\'           # Evaluate in a Pharo 9 image' \
         $'  st -x pharo install                 # Install with debug output' \
         $'  st -q pharo install                 # Install with no output' \
         $'  st pharo run                        # Launch Pharo UI' \
@@ -214,6 +216,17 @@ main() {
             ;;
     esac
 
+    # Pharo supports an optional leading version: st pharo <version> <command> [args]
+    # e.g. 'st pharo 12 install Seaside' installs Pharo 12 (get.pharo.org/64/120+vm).
+    local pharo_version_arg=""
+    local arg_start=3
+    if [[ "$impl" == "pharo" ]] && [[ "$cmd" =~ ^[0-9]+$ ]]; then
+        pharo_version_arg="$cmd"
+        cmd="${3:-}"
+        cmd="${cmd//-/_}"
+        arg_start=4
+    fi
+
     if [[ -z "$cmd" ]]; then
         printf "Error: No command specified for '%s'\n" "$impl" >&2
         printf "Run 'st %s help' for available commands.\n" "$impl" >&2
@@ -224,10 +237,18 @@ main() {
     # shellcheck source=libexec/smalltalk-common.sh
     source "${LIBEXEC_DIR}/smalltalk-${impl}.sh"
 
+    # Apply Pharo version override: user major N -> get.pharo.org version number N0
+    # (e.g. 12 -> 120, 9 -> 90). Set after sourcing so it overrides the default.
+    if [[ -n "$pharo_version_arg" ]]; then
+        PHARO_VERSION="${pharo_version_arg}0"
+        PHARO_VERSION_REQUESTED=1
+        export PHARO_VERSION PHARO_VERSION_REQUESTED
+    fi
+
     # Execute the command via dynamic dispatch
     local func_name="smalltalk_${impl}_${cmd}"
     if declare -f "$func_name" > /dev/null 2>&1; then
-        "$func_name" "${@:3}"
+        "$func_name" "${@:$arg_start}"
     else
         printf "Error: Command '%s' is not supported by '%s'\n" "$cmd" "$impl" >&2
         printf "Run 'st %s help' for available commands.\n" "$impl" >&2
