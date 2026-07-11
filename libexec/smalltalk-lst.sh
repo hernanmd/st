@@ -88,6 +88,18 @@ download_lst() {
     mv "$extracted_dir"/.* . 2> /dev/null || true
     rmdir "$extracted_dir" 2> /dev/null || true
 
+    # Pre-check build tools with an OS-tailored install hint instead of failing
+    # mid-build with a raw 'cmake/make: command not found'.
+    local -a missing_tools=()
+    cmd_exists make || missing_tools+=(make)
+    if ! cmd_exists gcc && ! cmd_exists clang; then missing_tools+=(gcc); fi
+    if [[ -f "CMakeLists.txt" ]] && ! cmd_exists cmake; then missing_tools+=(cmake); fi
+    if [[ ${#missing_tools[@]} -gt 0 ]]; then
+        cd "$original_dir"
+        suggest_install_packages "${missing_tools[@]}"
+        die "Cannot build Little Smalltalk v3 without the required build tools."
+    fi
+
     # Build the  binary
     log_info "Building Little Smalltalk v3..."
     if [[ -f "Makefile" ]]; then

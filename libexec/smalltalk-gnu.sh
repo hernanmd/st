@@ -50,7 +50,7 @@ install_gnustack_from_source() {
     log_info "Installing GNU Smalltalk from source..."
     log_info "This may take a while as it requires compilation."
 
-    # Check for dependencies
+    # Check for build dependencies; suggest an OS-tailored install one-liner.
     local deps=("gcc" "make" "bison" "flex" "libtool" "gettext")
     local missing_deps=()
 
@@ -61,10 +61,8 @@ install_gnustack_from_source() {
     done
 
     if [[ ${#missing_deps[@]} -gt 0 ]]; then
-        log_error "Missing dependencies: ${missing_deps[*]}"
-        log_info "On Debian/Ubuntu: sudo apt-get install ${missing_deps[*]}"
-        log_info "On macOS: brew install ${missing_deps[*]}"
-        die "Cannot install GNU Smalltalk without dependencies"
+        suggest_install_packages "${missing_deps[@]}"
+        die "Cannot install GNU Smalltalk without the required build tools."
     fi
 
     cd "$install_dir" || die "Cannot change to directory: $install_dir"

@@ -575,8 +575,10 @@ suggest_install_packages() {
         macos)
             for cmd in "${missing[@]}"; do
                 case "$cmd" in
-                    g++ | gcc | clang | clang++) pkgs+=(gcc) ;;
+                    g++ | gcc) pkgs+=(gcc) ;;
+                    clang | clang++) pkgs+=(llvm) ;;
                     make) pkgs+=(make) ;;
+                    libtool) pkgs+=(libtool) ;;
                     *) pkgs+=("$cmd") ;;
                 esac
             done
@@ -586,12 +588,15 @@ suggest_install_packages() {
             ;;
         linux)
             if cmd_exists apt-get; then
+                # On Debian the 'libtool' command is in libtool-bin (the 'libtool'
+                # package only ships the m4 macros), so map libtool -> libtool-bin.
                 for cmd in "${missing[@]}"; do
                     case "$cmd" in
                         g++) pkgs+=(g++) ;;
                         gcc) pkgs+=(gcc) ;;
                         clang | clang++) pkgs+=(clang) ;;
                         make) pkgs+=(make) ;;
+                        libtool) pkgs+=(libtool-bin) ;;
                         *) pkgs+=("$cmd") ;;
                     esac
                 done
@@ -601,9 +606,11 @@ suggest_install_packages() {
             elif cmd_exists dnf; then
                 for cmd in "${missing[@]}"; do
                     case "$cmd" in
-                        g++ | gcc) pkgs+=(gcc-c++) ;;
+                        g++) pkgs+=(gcc-c++) ;;
+                        gcc) pkgs+=(gcc) ;;
                         clang | clang++) pkgs+=(clang) ;;
                         make) pkgs+=(make) ;;
+                        libtool) pkgs+=(libtool) ;;
                         *) pkgs+=("$cmd") ;;
                     esac
                 done
@@ -615,6 +622,7 @@ suggest_install_packages() {
                     case "$cmd" in
                         g++ | gcc | clang | clang++) pkgs+=(gcc) ;;
                         make) pkgs+=(make) ;;
+                        libtool) pkgs+=(libtool) ;;
                         *) pkgs+=("$cmd") ;;
                     esac
                 done
