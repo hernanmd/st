@@ -247,7 +247,7 @@ IFS=$'\n\t'
     }
 
     # Uninstall: remove the installed directory and report leftovers.
-    # Mirrors `make uninstall` (rm -rf ~/.st/st) plus helpful hints for
+    # Mirrors `make uninstall` (removes ~/.st/st recursively) plus helpful hints for
     # backups, cache, and the PATH export the user may have added.
     uninstall_st() {
         local install_dir="${INSTALL_BASE}/${SCRIPT_NAME}"

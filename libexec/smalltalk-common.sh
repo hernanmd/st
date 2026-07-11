@@ -730,24 +730,6 @@ extract_archive() {
     esac
 }
 
-# Run command with optional loading animation
-# Arguments:
-#   $1 - command to run
-#   $2 - message to display (default: "Running...")
-# Returns:
-#   Exit code of the command
-run_with_animation() {
-    local cmd="$1"
-    local message="${2:-Running...}"
-
-    log_info "$message"
-    if eval -- "$cmd"; then
-        return 0
-    else
-        return 1
-    fi
-}
-
 # Prompt for confirmation
 # Arguments:
 #   $1 - prompt message (default: "Are you sure?")

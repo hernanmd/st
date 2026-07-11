@@ -86,7 +86,9 @@ done
 
 # Default to all test files
 if [[ ${#TEST_FILES[@]} -eq 0 ]]; then
-    mapfile -t TEST_FILES < <(find "${TESTS_DIR}" -name '*.bats' -type f 2> /dev/null || true)
+    while IFS= read -r f; do
+        TEST_FILES+=("$f")
+    done < <(find "${TESTS_DIR}" -name '*.bats' -type f 2> /dev/null || true)
 fi
 
 # Count tests

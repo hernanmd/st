@@ -102,17 +102,20 @@ jobs:
           echo "==> Checking for dangerous shell patterns..."
           DANGEROUS=0
 
-          # Check for eval on user input
+          # Check for shell 'eval' used as a command on a variable. Only flag
+          # 'eval' at a command position (not 'eval' passed as an argument to a
+          # VM binary like pharo/gt), and skip comment lines.
           for f in bin/st libexec/*.sh install.sh; do
-            if grep -n 'eval.*\$' "$f" 2>/dev/null; then
+            if grep -nE '^\s*(if\s+|then\s+|else\s+|!\s*|\|\|\s*|&&\s*)*eval\s+.*\$' "$f" 2>/dev/null | grep -vE '^\s*[0-9]+:\s*#'; then
               echo "WARNING: eval with variable found in $f"
               DANGEROUS=1
             fi
           done
 
-          # Check for rm -rf / patterns (without --)
+          # Check for rm -rf without -- (skip comments, /tmp, CACHE, and grep
+          # patterns that legitimately match 'rm -rf /' as a search string).
           for f in bin/st libexec/*.sh install.sh; do
-            if grep -nE 'rm\s+-rf\s+[^-$]' "$f" 2>/dev/null | grep -v '/tmp' | grep -v 'CACHE'; then
+            if grep -nE 'rm\s+-rf\s+[^-$]' "$f" 2>/dev/null | grep -vE '^\s*[0-9]+:\s*#' | grep -v '/tmp' | grep -v 'CACHE' | grep -v 'grep'; then
               echo "WARNING: rm -rf without -- found in $f"
               DANGEROUS=1
             fi

@@ -166,10 +166,41 @@ choose_gnustack_fallback() {
 # Launch a Debian 11 (bullseye) container, install gnu-smalltalk via apt (the
 # package still exists there), and drop into an interactive shell where 'gst' is
 # available. The container is removed on exit (--rm). Requires Docker.
+# Print an OS/package-manager-tailored one-liner to install Docker.
+suggest_install_docker() {
+    local os_type
+    os_type=$(get_os)
+    case "$os_type" in
+        macos)
+            log_info "On macOS, install Docker Desktop with:"
+            printf '  brew install --cask docker\n'
+            ;;
+        linux)
+            if cmd_exists apt-get; then
+                log_info "On Debian/Ubuntu, install Docker with:"
+                printf '  sudo apt-get install -y docker.io\n'
+            elif cmd_exists dnf; then
+                log_info "On Fedora/RHEL, install Docker with:"
+                printf '  sudo dnf install -y docker\n'
+            elif cmd_exists pacman; then
+                log_info "On Arch, install Docker with:"
+                printf '  sudo pacman -S --noconfirm docker\n'
+            else
+                log_info "Install Docker via your package manager."
+            fi
+            log_info 'Then start the daemon (e.g. `sudo systemctl enable --now docker`) and add yourself to the docker group (`sudo usermod -aG docker "$USER"`; re-login), or run Docker with sudo.'
+            ;;
+        *)
+            log_info "Install Docker via your package manager, then start the daemon."
+            ;;
+    esac
+}
+
 install_gnustack_in_container() {
     if ! cmd_exists docker; then
         log_error "Docker is not installed."
-        log_info "Install Docker, or choose 'Build from source' instead."
+        suggest_install_docker
+        log_info "Or choose 'Build from source' instead."
         return 1
     fi
     if ! docker info > /dev/null 2>&1; then
@@ -203,7 +234,7 @@ install_gnustack_package() {
             log_info "You may be prompted for your password."
 
             if [[ -z "${SMALLTALK_YES:-}" ]]; then
-                if ! confirm "Continue with sudo installation? [y/N] "; then
+                if ! confirm "Continue with sudo installation?"; then
                     log_info "Installation cancelled. Use --source to build without sudo."
                     return 1
                 fi
