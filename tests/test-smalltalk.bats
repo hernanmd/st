@@ -287,14 +287,14 @@ teardown() {
 
 @test "st pharo with unknown command shows error" {
     run "$SMALLTALK_CMD" pharo unknowncmd
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"Unknown command"* ]]
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"is not supported"* ]]
 }
 
 @test "st gt with unknown command shows error" {
     run "$SMALLTALK_CMD" gt unknowncmd
-    [ "$status" -eq 1 ]
-    [[ "$output" == *"Unknown command"* ]]
+    [ "$status" -eq 2 ]
+    [[ "$output" == *"is not supported"* ]]
 }
 
 # ============================================================================
