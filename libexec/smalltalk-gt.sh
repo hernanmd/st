@@ -144,7 +144,7 @@ download_gt() {
                 gt_files+=("$(pwd)/$f")
             fi
         done
-        register_install "gt" "$(pwd)" "${gt_files[@]}"
+        register_install "gt" "$(pwd)" ${gt_files[@]+"${gt_files[@]}"}
     else
         die "Glamorous Toolkit installation failed"
     fi

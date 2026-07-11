@@ -270,7 +270,7 @@ download_cuis() {
                 files+=("$(pwd)/$f")
             fi
         done
-        register_install "cuis" "$(pwd)" "${files[@]}"
+        register_install "cuis" "$(pwd)" ${files[@]+"${files[@]}"}
     else
         log_error "Contents of install directory:"
         ls -la .

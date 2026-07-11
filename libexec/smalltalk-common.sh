@@ -254,7 +254,7 @@ manifest_add() {
     # Use jq to add to manifest if available, otherwise use sed
     if cmd_exists jq; then
         local files_json="[]"
-        for file in "${files[@]}"; do
+        for file in ${files[@]+"${files[@]}"}; do
             local file_escaped
             file_escaped="$(printf '%s' "$file" | sed 's/"/\\"/g')"
             files_json="$(printf '%s' "$files_json" | jq --arg f "$file_escaped" '. += [$f]')"
@@ -1175,6 +1175,6 @@ register_install() {
     shift 2
     local files=("$@")
 
-    manifest_add "$impl" "$install_dir" "${files[@]}"
+    manifest_add "$impl" "$install_dir" ${files[@]+"${files[@]}"}
     log_debug "Registered installation of $impl to manifest"
 }
