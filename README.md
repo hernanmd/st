@@ -13,6 +13,7 @@
   - [Installer options](#installer-options)
   - [Bash users](#bash-users)
   - [Zsh users](#zsh-users)
+- [Agent Skills](#agent-skills)
 - [Features](#features)
 - [Usage Examples](#usage-examples)
 - [Troubleshooting](#troubleshooting)
@@ -154,6 +155,19 @@ To persist usage between multiple shell sessions:
 echo -n 'export PATH=$HOME/.st/st/bin:$PATH' >> ~/.zshrc
 source ~/.zshrc
 ```
+
+# Agent Skills
+
+`st` ships ready-to-use agent skills — drop them into your agent's skills directory.
+
+- **User workflow skill** — drive `st` from shells, Makefiles, CI, or agents (install/upgrade/uninstall, per-dialect commands, headless eval, package search/list, gotchas):
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/hernanmd/st/master/doc/st-workflow-skill.md -o st-workflow.SKILL.md
+  ```
+- **Developer lessons skill** — operational patterns for fixing `st`, shipping fixes, and adding new Smalltalk implementations:
+  ```bash
+  curl -fsSL https://raw.githubusercontent.com/hernanmd/st/master/doc/st-dev-lessons-skill.md -o st-dev-lessons.SKILL.md
+  ```
 
 # Features
 
