@@ -561,6 +561,58 @@ smalltalk_cuis_clean_artifacts() {
     fi
 }
 
+# Locate the Cuis (Squeak) VM inside CuisVM.app for the current OS/arch.
+find_cuis_vm() {
+    local cpu os_type
+    os_type=$(get_os)
+    case "$os_type" in
+        macos)
+            if [[ -x "./CuisVM.app/Contents/MacOS/Squeak" ]]; then
+                echo "./CuisVM.app/Contents/MacOS/Squeak"
+                return 0
+            fi
+            ;;
+        linux)
+            cpu="$(uname -m)"
+            case "$cpu" in
+                i386 | i686) cpu="i686" ;;
+                aarch64 | arm64) cpu="arm64" ;;
+                armv6l | armv7l) cpu="arm" ;;
+            esac
+            if [[ -x "./CuisVM.app/Contents/Linux-${cpu}/squeak" ]]; then
+                echo "./CuisVM.app/Contents/Linux-${cpu}/squeak"
+                return 0
+            fi
+            ;;
+        windows)
+            local f
+            shopt -s nullglob
+            for f in ./CuisVM.app/Contents/Windows-*/Squeak.exe ./CuisVM.app/Contents/Windows-*/squeak.exe; do
+                if [[ -x "$f" ]]; then
+                    shopt -u nullglob
+                    echo "$f"
+                    return 0
+                fi
+            done
+            shopt -u nullglob
+            ;;
+    esac
+    return 1
+}
+
+# Locate the Cuis image (CuisImage/*.image, then root Cuis*.image).
+find_cuis_image() {
+    local img
+    shopt -s nullglob
+    for img in CuisImage/*.image Cuis*.image; do
+        shopt -u nullglob
+        echo "$img"
+        return 0
+    done
+    shopt -u nullglob
+    return 1
+}
+
 smalltalk_cuis_version() {
     local cuis_dir
     cuis_dir=$(is_cuis_installed) || {
@@ -570,12 +622,18 @@ smalltalk_cuis_version() {
 
     cd "$cuis_dir" || return 1
 
-    # Try to get version from image
-    if [[ -f "./run_cuis.sh" ]]; then
-        grep -oP 'version \K[0-9.]+' ./run_cuis.sh 2> /dev/null || echo "Cuis (version unknown)"
-    else
-        echo "Cuis (installed at $cuis_dir)"
+    # Read the version from the image filename (e.g. Cuis7.6.image -> 7.6)
+    local img base ver
+    img=$(find_cuis_image 2> /dev/null | head -1)
+    if [[ -n "$img" ]]; then
+        base="$(basename "$img")"
+        ver="$(printf '%s' "$base" | sed -nE 's/^Cuis([0-9.]+).*\.image$/\1/p')"
+        if [[ -n "$ver" ]]; then
+            echo "Cuis $ver"
+            return 0
+        fi
     fi
+    echo "Cuis (installed at $cuis_dir)"
 }
 
 smalltalk_cuis_eval() {
@@ -589,10 +647,31 @@ smalltalk_cuis_eval() {
 
     ensure_cuis_dir
 
-    if [[ -f "./run_cuis.sh" ]]; then
-        ./run_cuis.sh eval "$code"
-    else
-        log_error "Cuis executable not found in: $_CUIS_DIR"
+    # Cuis has no built-in 'eval' command; use the documented headless mechanism:
+    # <VM> -headless <image> -s <file.st>. The .st evaluates the code, prints the
+    # result to stdout via StdIOWriteStream, and quits. (Previously this looked
+    # for a nonexistent run_cuis.sh and errored with 'Cuis executable not found'.)
+    local vm image
+    vm=$(find_cuis_vm) || {
+        log_error "Cuis VM not found in: $_CUIS_DIR"
         return 1
-    fi
+    }
+    image=$(find_cuis_image) || {
+        log_error "Cuis image not found in: $_CUIS_DIR"
+        return 1
+    }
+    chmod +x "$vm" 2> /dev/null || true
+
+    local script_file
+    script_file="$(mktemp).st"
+    {
+        printf 'StdIOWriteStream nextPutAll: ([ '
+        printf '%s' "$code"
+        printf ' ] value printString); newLine.\nSmalltalk quit.\n'
+    } > "$script_file"
+
+    "$vm" -headless "$image" -s "$script_file"
+    local rc=$?
+    rm -f -- "$script_file"
+    return $rc
 }
