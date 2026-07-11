@@ -647,10 +647,13 @@ smalltalk_cuis_eval() {
 
     ensure_cuis_dir
 
-    # Cuis has no built-in 'eval' command; use the documented headless mechanism:
-    # <VM> -headless <image> -s <file.st>. The .st evaluates the code, prints the
-    # result to stdout via StdIOWriteStream, and quits. (Previously this looked
-    # for a nonexistent run_cuis.sh and errored with 'Cuis executable not found'.)
+    # Cuis has no built-in 'eval' command. Use the VM's -d (DoIt) flag, which
+    # evaluates a Smalltalk expression on startup - the documented Cuis headless
+    # mechanism (e.g. Cuis CookBook: squeak image -d "..." -d "Smalltalk quit.").
+    # NB: -s <file.st> does NOT work in current Cuis - the image ignores it and
+    # enters the event loop, hanging forever (which is what happened before).
+    # Evaluate the user's code, print the result to stdout via
+    # 'StdIOWriteStream stdout' (with flush), then quit in a second -d.
     local vm image
     vm=$(find_cuis_vm) || {
         log_error "Cuis VM not found in: $_CUIS_DIR"
@@ -662,16 +665,15 @@ smalltalk_cuis_eval() {
     }
     chmod +x "$vm" 2> /dev/null || true
 
-    local script_file
-    script_file="$(mktemp).st"
-    {
-        printf 'StdIOWriteStream nextPutAll: ([ '
-        printf '%s' "$code"
-        printf ' ] value printString); newLine.\nSmalltalk quit.\n'
-    } > "$script_file"
-
-    "$vm" -headless "$image" -s "$script_file"
-    local rc=$?
-    rm -f -- "$script_file"
-    return $rc
+    # ${code} is substituted verbatim - bash does not recursively expand, so '$'
+    # and '"' inside the user's code are preserved literally for the DoIt.
+    local print_doit="StdIOWriteStream stdout nextPutAll: ([ ${code} ] value printString); newLine; flush."
+    # Guard against a hang (e.g. the code errors before reaching quit) with
+    # timeout if available.
+    if cmd_exists timeout; then
+        timeout 30 "$vm" -headless "$image" -d "$print_doit" -d "Smalltalk quit."
+    else
+        "$vm" -headless "$image" -d "$print_doit" -d "Smalltalk quit."
+    fi
+    return $?
 }
