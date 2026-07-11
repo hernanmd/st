@@ -127,8 +127,15 @@ download_lst() {
         die "No build system found. Expected Makefile or CMakeLists.txt"
     fi
 
-    if [[ -f "./build/lst3" ]]; then
-        chmod +x ./build/lst3
+    # Normalize the lst3 binary to the install dir root (./lst3), which is what
+    # is_lst_installed/run_lst expect. The Makefile build leaves it there; the
+    # CMake build leaves it in ./build - move it up.
+    if [[ -f "./build/lst3" ]] && [[ ! -f "./lst3" ]]; then
+        mv ./build/lst3 ./lst3
+    fi
+
+    if [[ -f "./lst3" ]]; then
+        chmod +x ./lst3
         cd "$original_dir"
         log_success "Little Smalltalk v3 installed successfully to ${install_dir}"
     else
