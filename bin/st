@@ -142,7 +142,7 @@ upgrade_st() {
     local install_url="https://raw.githubusercontent.com/hernanmd/st/master/install.sh"
     local tmp_install
     tmp_install="$(mktemp)"
-    log_info "Upgrading st (re-running the installer with --force)..."
+    log_info "Upgrading st..."
     if ! download_file "$install_url" "$tmp_install"; then
         log_error "Failed to download the installer from ${install_url}"
         rm -f -- "$tmp_install"
