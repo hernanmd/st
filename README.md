@@ -121,7 +121,7 @@ Examples:
 
 ```bash
 # Reinstall / upgrade (backs up the previous install)
-bash -c "$(curl -fsSL https://raw.githubusercontent.com/hernanmd/st/master/install.sh)" _ --force
+st upgrade
 
 # Uninstall
 bash -c "$(curl -fsSL https://raw.githubusercontent.com/hernanmd/st/master/install.sh)" _ --uninstall
@@ -320,7 +320,7 @@ st --version
 # Contribute
 
 **Working on your first Pull Request?** You can learn how from this *free* series [How to Contribute to an Open Source Project on
-GitHub](https://egghead.io/series/how-to-contribute-to-an-open-source-project-on-github)
+GitHub](https://docs.github.com/en/get-started/exploring-projects-on-github/contributing-to-a-project)
 
 If you have discovered a bug or have a feature suggestions, feel free to create an issue on Github.
 
